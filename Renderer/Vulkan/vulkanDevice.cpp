@@ -3,6 +3,8 @@
 #include <iostream>
 #include <set>
 #include <string>
+#include <shaderc/shaderc.hpp>
+#include "vulkanPipeline.h"
 
 namespace Euclase {
 
@@ -41,6 +43,7 @@ bool VulkanDevice::Init(
         return false;
     }
 
+
     if (!vulkan13Features.dynamicRendering) {
         std::cerr
             << "Device does not support dynamic rendering.\n";
@@ -55,6 +58,7 @@ bool VulkanDevice::Init(
         return false;
     }
 
+
     return true;
 }
 void VulkanDevice::Destroy()
@@ -66,6 +70,97 @@ void VulkanDevice::Destroy()
     physicalDevice = nullptr;
 }
 
+    std::vector<uint32_t> CompileShader(
+        const std::string& source,
+        shaderc_shader_kind kind,
+        const std::string& filename
+    ) {
+    shaderc::Compiler compiler;
+    shaderc::CompileOptions options;
+
+    options.SetTargetEnvironment(
+        shaderc_target_env_vulkan,
+        shaderc_env_version_vulkan_1_3
+    );
+
+    auto result = compiler.CompileGlslToSpv(
+        source,
+        kind,
+        filename.c_str(),
+        options
+    );
+
+    if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
+        throw std::runtime_error(
+            filename + ": " + result.GetErrorMessage()
+        );
+    }
+
+    return {result.cbegin(), result.cend()};
+}
+    vk::raii::ShaderModule CreateShaderModule(
+    vk::raii::Device& device,
+    const std::vector<uint32_t>& spirv
+) {
+    vk::ShaderModuleCreateInfo info{
+        {},
+        spirv.size() * sizeof(uint32_t),
+        spirv.data()
+    };
+
+    return vk::raii::ShaderModule(device, info);
+}
+    vk::Format VulkanDevice::ToVkFormat(TextureFormat format) {
+    switch (format) {
+        case TextureFormat::RGBA8:
+            return vk::Format::eR8G8B8A8Srgb;
+
+        case TextureFormat::BGRA8:
+            return vk::Format::eB8G8R8A8Srgb;
+
+        case TextureFormat::RGBA16F:
+            return vk::Format::eR16G16B16A16Sfloat;
+
+        case TextureFormat::Depth24Stencil8:
+            return vk::Format::eD24UnormS8Uint;
+
+        case TextureFormat::Depth32F:
+            return vk::Format::eD32Sfloat;
+
+        case TextureFormat::Undefined:
+        default:
+            return vk::Format::eUndefined;
+    }
+}
+    std::unique_ptr<GraphicsPipeline>
+    VulkanDevice::CreatePipeline(const GraphicsPipelineDesc& desc)
+{
+    auto vert = CompileShader(
+        desc.vertexShader,
+        shaderc_glsl_vertex_shader,
+        "vert.vert"
+    );
+
+    auto frag = CompileShader(
+        desc.fragmentShader,
+        shaderc_glsl_fragment_shader,
+        "frag.frag"
+    );
+
+    auto vertexModule = CreateShaderModule(device, vert);
+    auto fragmentModule = CreateShaderModule(device, frag);
+
+    const vk::Format colorFormat = ToVkFormat(desc.colorFormat);
+    const vk::Format depthFormat = ToVkFormat(desc.depthFormat);
+
+    return std::make_unique<VulkanPipeline>(
+        device,
+        vertexModule,
+        fragmentModule,
+        colorFormat,
+        depthFormat
+    );
+}
 bool VulkanDevice::PickPhysicalDevice(
     const vk::raii::Instance& instance,
     const vk::raii::SurfaceKHR& surface)

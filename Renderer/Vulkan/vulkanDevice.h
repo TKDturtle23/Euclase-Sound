@@ -5,10 +5,10 @@
 #include <cstdint>
 #include <optional>
 #include <vector>
-
+#include "../GraphicsDevice.h"
 namespace Euclase {
 
-class VulkanDevice {
+class VulkanDevice final : public GraphicsDevice {
 public:
     VulkanDevice() = default;
     ~VulkanDevice() = default;
@@ -43,6 +43,12 @@ public:
     uint32_t GetPresentQueueFamily() const {
         return presentQueueFamily;
     }
+
+    vk::Format ToVkFormat(TextureFormat format);
+
+    std::unique_ptr<GraphicsPipeline> CreatePipeline(
+            const GraphicsPipelineDesc& desc
+        ) override;
 
 private:
     struct QueueFamilies {

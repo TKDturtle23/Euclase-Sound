@@ -12,7 +12,7 @@ namespace Euclase {
         Disconnect();
     }
 
-    bool Platform_Wayland::CreateWindow(
+    bool Platform_Wayland::create(
         int width,
         int height,
         const char* title)

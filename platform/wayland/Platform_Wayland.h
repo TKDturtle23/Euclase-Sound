@@ -11,7 +11,7 @@ namespace Euclase {
         Platform_Wayland() = default;
         ~Platform_Wayland() override;
 
-        bool CreateWindow(
+        bool create(
             int width,
             int height,
             const char* title

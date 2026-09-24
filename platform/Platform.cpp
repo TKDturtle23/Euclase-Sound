@@ -5,8 +5,11 @@
 #include "Platform.h"
 #include "../Defines.h"
 
+
 #ifdef Wayland
 #include "wayland/Platform_Wayland.h"
+#elif defined(_WIN32)
+#include "win32/Platform_Win32.h"
 #endif
 namespace Euclase {
 
@@ -14,6 +17,8 @@ namespace Euclase {
 
 #ifdef Wayland
         return std::make_shared<Platform_Wayland>();
+#elif defined(_WIN32)
+        return std::make_shared<Platform_Win32>();
 #endif
         return nullptr;
 

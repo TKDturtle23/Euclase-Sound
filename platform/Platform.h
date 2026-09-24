@@ -14,8 +14,8 @@ namespace Euclase {
         virtual ~Platform() = default;
 
         static std::shared_ptr<Platform> GetNewWindow();
-
-        virtual bool CreateWindow(int width, int height, const char *title) = 0;
+        virtual bool ShouldClose() = 0;
+        virtual bool create(int width, int height, const char *title) = 0;
         virtual void Disconnect() = 0;
         virtual void Dispatch() = 0;
     };
