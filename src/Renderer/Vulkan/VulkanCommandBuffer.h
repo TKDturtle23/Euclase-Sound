@@ -54,9 +54,19 @@ namespace Euclase {
         operator vk::CommandBuffer() const {
             return *commandBuffer;
         }
+         void PushConstant(
+            ShaderStage stage,
+            uint32_t offset,
+            const void* data,
+            size_t size, GraphicsPipeline* pipeline
+        ) override;
 
+         void PushResource(
+            const ShaderResource& resource, GraphicsPipeline* pipeline
+        ) override;
     private:
         vk::raii::CommandBuffer commandBuffer{nullptr};
+
     };
 
 }

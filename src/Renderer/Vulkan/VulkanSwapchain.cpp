@@ -1,5 +1,5 @@
 #include "VulkanSwapchain.h"
-#include "VulkanDevice.h"
+#include "vulkanDevice.h"
 
 #include <algorithm>
 #include <array>
@@ -13,6 +13,7 @@ bool VulkanSwapchain::Init(
     uint32_t height,
     vk::SwapchainKHR oldSwapchain
 ) {
+
     graphicsQueueFamily = device.GetGraphicsQueueFamily();
     presentQueueFamily = device.GetPresentQueueFamily();
 
@@ -276,4 +277,7 @@ bool VulkanSwapchain::CreateImageViews(const vk::raii::Device& device) {
     return true;
 }
 
+int VulkanSwapchain::GetImages() {
+    return images.size();
+}
 }

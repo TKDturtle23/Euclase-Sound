@@ -8,6 +8,7 @@ bool vulkanRenderer::Init(
 std::shared_ptr<Platform> platform,
     bool enableValidation, int width, int height)
 {
+    this->m_platform = platform;
     windowWidth = width;
     windowHeight = height;
      platformVulkan = Euclase::PlatformVulkan::create(platform);
@@ -79,26 +80,50 @@ std::shared_ptr<GraphicsDevice> vulkanRenderer::GetDevice() {
 
 
 
-bool vulkanRenderer::CreateSyncObjects() {
+    bool vulkanRenderer::CreateSyncObjects()
+{
+    imageAvailableSemaphores.clear();
+    renderFinishedSemaphores.clear();
+    inFlightFences.clear();
+
     imageAvailableSemaphores.reserve(kFramesInFlight);
-    renderFinishedSemaphores.reserve(kFramesInFlight);
     inFlightFences.reserve(kFramesInFlight);
 
-    for (uint32_t i = 0; i < kFramesInFlight; ++i) {
-        try {
+    const size_t imageCount =
+        swapchain.GetImages();
+
+    renderFinishedSemaphores.reserve(imageCount);
+
+    try
+    {
+        for (uint32_t i = 0; i < kFramesInFlight; ++i)
+        {
             imageAvailableSemaphores.emplace_back(
-                device->GetDevice(), vk::SemaphoreCreateInfo{}
-            );
-            renderFinishedSemaphores.emplace_back(
-                device->GetDevice(), vk::SemaphoreCreateInfo{}
+                device->GetDevice(),
+                vk::SemaphoreCreateInfo{}
             );
 
             vk::FenceCreateInfo fenceInfo{};
-            fenceInfo.flags = vk::FenceCreateFlagBits::eSignaled;
-            inFlightFences.emplace_back(device->GetDevice(), fenceInfo);
-        } catch (const vk::SystemError&) {
-            return false;
+            fenceInfo.flags =
+                vk::FenceCreateFlagBits::eSignaled;
+
+            inFlightFences.emplace_back(
+                device->GetDevice(),
+                fenceInfo
+            );
         }
+
+        for (size_t i = 0; i < imageCount; ++i)
+        {
+            renderFinishedSemaphores.emplace_back(
+                device->GetDevice(),
+                vk::SemaphoreCreateInfo{}
+            );
+        }
+    }
+    catch (const vk::SystemError&)
+    {
+        return false;
     }
 
     return true;
@@ -123,40 +148,93 @@ void vulkanRenderer::Destroy()
     context.Destroy();
 }
 
-void vulkanRenderer::RecreateSwapchain() {
+    void vulkanRenderer::RecreateSwapchain()
+{
+    if (windowWidth <= 0 || windowHeight <= 0)
+        return;
+
     device->GetDevice().waitIdle();
-    swapchain.Recreate(*device, *surface, windowWidth, windowHeight);
+
+    renderFinishedSemaphores.clear();
+
+    swapchain.Recreate(
+        *device,
+        *surface,
+        windowWidth,
+        windowHeight
+    );
+
+    const uint32_t imageCount =
+        swapchain.GetImageCount();
+
+    renderFinishedSemaphores.reserve(imageCount);
+
+    for (uint32_t i = 0; i < imageCount; ++i)
+    {
+        renderFinishedSemaphores.emplace_back(
+            device->GetDevice(),
+            vk::SemaphoreCreateInfo{}
+        );
+    }
 }
 
-bool vulkanRenderer::BeginFrame() {
+    bool vulkanRenderer::BeginFrame()
+{
     vk::Fence fence = *inFlightFences[currentFrame];
-    auto waitResult = device->GetDevice().waitForFences(fence, vk::True, UINT64_MAX);
-    (void)waitResult;
+
+    device->GetDevice().waitForFences(
+        fence,
+        vk::True,
+        UINT64_MAX
+    );
+
+    m_platform->GetWindowSize(
+        this->windowWidth,
+        this->windowHeight
+    );
+
+    if (windowWidth <= 0 || windowHeight <= 0)
+        return false;
+
+    if (windowWidth != static_cast<int>(swapchain.GetExtent().width) ||
+        windowHeight != static_cast<int>(swapchain.GetExtent().height))
+    {
+        RecreateSwapchain();
+        return false;
+    }
 
     bool outOfDate = false;
+
     if (!swapchain.AcquireNextImage(
             device->GetDevice(),
             *imageAvailableSemaphores[currentFrame],
             currentImageIndex,
             outOfDate))
     {
-        if (outOfDate) {
+        if (outOfDate)
             RecreateSwapchain();
-        }
+
         return false;
     }
 
     device->GetDevice().resetFences(fence);
 
     auto& cmd = commandBuffers[currentFrame];
+
     cmd->Reset();
     cmd->Begin();
 
-    swapchain.TransitionToColorAttachment(cmd->Get(), currentImageIndex);
+    swapchain.TransitionToColorAttachment(
+        cmd->Get(),
+        currentImageIndex
+    );
 
-    auto colorAttachment = swapchain.MakeColorAttachmentInfo(currentImageIndex);
+    auto colorAttachment =
+        swapchain.MakeColorAttachmentInfo(currentImageIndex);
+
     vk::RenderingInfo renderingInfo{};
-    renderingInfo.renderArea = vk::Rect2D{{0, 0}, swapchain.GetExtent()};
+    renderingInfo.renderArea =
+        vk::Rect2D{{0, 0}, swapchain.GetExtent()};
     renderingInfo.layerCount = 1;
     renderingInfo.colorAttachmentCount = 1;
     renderingInfo.pColorAttachments = &colorAttachment;
@@ -173,12 +251,14 @@ bool vulkanRenderer::BeginFrame() {
     };
 
     cmd->Get().setViewport(0, viewport);
+
     vk::Rect2D scissor{
         vk::Offset2D{0, 0},
         swapchain.GetExtent()
     };
 
     cmd->Get().setScissor(0, scissor);
+
     return true;
 }
 
@@ -190,7 +270,7 @@ void vulkanRenderer::EndFrame() {
     cmd->End();
 
     vk::Semaphore waitSem = *imageAvailableSemaphores[currentFrame];
-    vk::Semaphore signalSem = *renderFinishedSemaphores[currentFrame];
+    vk::Semaphore signalSem = *renderFinishedSemaphores[currentImageIndex];
     vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
     vk::CommandBuffer cmdHandle = cmd->Get();
 
@@ -216,6 +296,8 @@ void vulkanRenderer::EndFrame() {
     auto presentResult = device->GetPresentQueue().presentKHR(presentInfo);
     if (presentResult == vk::Result::eErrorOutOfDateKHR ||
         presentResult == vk::Result::eSuboptimalKHR) {
+
+        m_platform->GetWindowSize(windowWidth, windowHeight);
         RecreateSwapchain();
     }
 

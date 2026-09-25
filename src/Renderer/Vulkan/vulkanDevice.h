@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <optional>
 #include <vector>
+
+#include "../GraphicsBuffer.h"
 #include "../GraphicsDevice.h"
 namespace Euclase {
 
@@ -49,7 +51,7 @@ public:
     std::unique_ptr<GraphicsPipeline> CreatePipeline(
             const GraphicsPipelineDesc& desc
         ) override;
-
+    std::shared_ptr<GraphicsBuffer> CreateBuffer(size_t size, BufferUsage usage, BufferMemory memory) override;
 private:
     struct QueueFamilies {
         std::optional<uint32_t> graphics;
@@ -107,7 +109,8 @@ private:
     uint32_t presentQueueFamily = 0;
 
     std::vector<const char*> requiredExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
     };
 };
 

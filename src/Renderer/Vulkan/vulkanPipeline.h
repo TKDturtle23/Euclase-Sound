@@ -17,7 +17,9 @@ namespace Euclase {
             vk::ShaderModule vertexShader,
             vk::ShaderModule fragmentShader,
             vk::Format colorFormat,
-            vk::Format depthFormat = vk::Format::eUndefined
+            vk::Format depthFormat = vk::Format::eUndefined,
+            std::vector<ShaderConstant> constants = {},
+            std::vector<ShaderResource> resources = {}
         );
 
         void Create(
@@ -25,7 +27,9 @@ namespace Euclase {
             vk::ShaderModule vertexShader,
             vk::ShaderModule fragmentShader,
             vk::Format colorFormat,
-            vk::Format depthFormat = vk::Format::eUndefined
+            vk::Format depthFormat = vk::Format::eUndefined,
+            std::vector<ShaderConstant> constants = {},
+            std::vector<ShaderResource> resources = {}
         );
 
         [[nodiscard]]
@@ -41,8 +45,11 @@ namespace Euclase {
         void Bind(vk::CommandBuffer commandBuffer) const;
 
     private:
+        vk::raii::DescriptorSetLayout descriptorSetLayout{nullptr};
         vk::raii::PipelineLayout layout{nullptr};
         vk::raii::Pipeline pipeline{nullptr};
+
+
     };
 
 } // namespace Euclase

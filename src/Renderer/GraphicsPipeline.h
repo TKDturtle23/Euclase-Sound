@@ -8,8 +8,10 @@
 
 #include "CommandBuffer.h"
 #include "GraphicsTypes.h"
-
+#include <vector>
 namespace Euclase {
+
+
     struct GraphicsPipelineDesc {
         std::string vertexShader;
         std::string fragmentShader;
@@ -21,6 +23,8 @@ namespace Euclase {
         bool depthWrite = false;
 
         bool blending = false;
+        std::vector<ShaderConstant> constants;
+        std::vector<ShaderResource> resources;
     };
     class GraphicsPipeline {
     public:

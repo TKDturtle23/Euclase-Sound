@@ -15,41 +15,47 @@ add_subdirectory(submodules/shaderc)
 # Common sources (platform-independent)
 # -------------------------------------------------------------------------
 set(COMMON_SOURCES
-        main.cpp
-        platform/Platform.cpp
-        platform/Event.cpp
+        src/main.cpp
+        src/platform/Platform.cpp
+        src/platform/Event.cpp
 
-        Renderer/Vulkan/vulkanContext.cpp
-        Renderer/Vulkan/vulkanRenderer.cpp
-        Renderer/Vulkan/vulkanDevice.cpp
-        Renderer/Vulkan/vulkanDevice.h
+        src/Renderer/Vulkan/vulkanContext.cpp
+        src/Renderer/Vulkan/vulkanRenderer.cpp
+        src/Renderer/Vulkan/vulkanDevice.cpp
+        src/Renderer/Vulkan/vulkanDevice.h
 
-        Renderer/Vulkan/platform/vulkanPlatform.h
-        Renderer/Vulkan/platform/vulkanPlatform.cpp
+        src/Renderer/Vulkan/platform/vulkanPlatform.h
+        src/Renderer/Vulkan/platform/vulkanPlatform.cpp
 
-        Renderer/Vulkan/VulkanSwapchain.cpp
-        Renderer/Vulkan/VulkanSwapchain.h
+        src/Renderer/Vulkan/VulkanSwapchain.cpp
+        src/Renderer/Vulkan/VulkanSwapchain.h
 
-        Renderer/Vulkan/VulkanCommandBuffer.cpp
-        Renderer/Vulkan/VulkanCommandBuffer.h
+        src/Renderer/Vulkan/VulkanCommandBuffer.cpp
+        src/Renderer/Vulkan/VulkanCommandBuffer.h
 
-        Renderer/Vulkan/vulkanPipeline.cpp
-        Renderer/Vulkan/vulkanPipeline.h
+        src/Renderer/Vulkan/vulkanPipeline.cpp
+        src/Renderer/Vulkan/vulkanPipeline.h
 
-        Renderer/CommandBuffer.h
-        Renderer/GraphicsTypes.h
-        Renderer/GraphicsDevice.h
-        Renderer/GraphicsRenderer.h
-        Renderer/GraphicsPipeline.h
+        src/Renderer/CommandBuffer.h
+        src/Renderer/GraphicsTypes.h
+        src/Renderer/GraphicsDevice.h
+        src/Renderer/GraphicsRenderer.h
+        src/Renderer/GraphicsPipeline.h
 
-        Renderer/RendererFactory.cpp
-        Renderer/RendererFactory.h
+        src/Renderer/RendererFactory.cpp
+        src/Renderer/RendererFactory.h
+        src/Renderer/Vulkan/VulkanBuffer.cpp
+        src/Renderer/Vulkan/VulkanBuffer.h
+        src/Renderer/GraphicsBuffer.h
+        src/GUI/EuclaseGUI.cpp
+        src/GUI/EuclaseGUI.h
 )
 
 add_executable(EuclaseSound ${COMMON_SOURCES})
 
 target_include_directories(EuclaseSound PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR}
+        "src/"
 )
 
 target_link_libraries(EuclaseSound PRIVATE
@@ -157,13 +163,13 @@ if(UNIX AND NOT APPLE)
     )
 
     target_sources(EuclaseSound PRIVATE
-            platform/wayland/Platform_Wayland.cpp
-            platform/wayland/WaylandBuffer.cpp
-            platform/wayland/WaylandDisplay.cpp
-            platform/wayland/WaylandWindow.cpp
+            src/platform/wayland/Platform_Wayland.cpp
+            src/platform/wayland/WaylandBuffer.cpp
+            src/platform/wayland/WaylandDisplay.cpp
+            src/platform/wayland/WaylandWindow.cpp
 
-            Renderer/Vulkan/platform/waylandVulkan.cpp
-            Renderer/Vulkan/platform/waylandVulkan.h
+            src/Renderer/Vulkan/platform/waylandVulkan.cpp
+            src/Renderer/Vulkan/platform/waylandVulkan.h
 
             ${XDG_SHELL_CODE}
             ${XDG_DECORATION_CODE}
@@ -192,11 +198,11 @@ if(UNIX AND NOT APPLE)
 elseif(WIN32)
 
     target_sources(EuclaseSound PRIVATE
-            platform/win32/Platform_Win32.cpp
-            platform/win32/Platform_Win32.h
+            src/platform/win32/Platform_Win32.cpp
+            src/platform/win32/Platform_Win32.h
 
-            Renderer/Vulkan/platform/win32Vulkan.cpp
-            Renderer/Vulkan/platform/win32Vulkan.h
+            src/Renderer/Vulkan/platform/win32Vulkan.cpp
+            src/Renderer/Vulkan/platform/win32Vulkan.h
     )
 
     target_compile_definitions(EuclaseSound PRIVATE

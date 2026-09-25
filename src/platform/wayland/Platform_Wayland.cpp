@@ -82,5 +82,11 @@ namespace Euclase {
         return window;
     }
 
+    bool Platform_Wayland::ShouldClose() {
+        return window->ShouldClose();
+    }
 
+    void Platform_Wayland::GetWindowSize(int &outWidth, int &outHeight) const {
+        return window->GetSize(outWidth, outHeight);
+    }
 }

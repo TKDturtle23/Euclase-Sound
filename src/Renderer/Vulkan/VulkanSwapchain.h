@@ -93,6 +93,7 @@ public:
     vk::Extent2D GetExtent() const {
         return extent;
     }
+    int GetImages();
 
 private:
     struct SupportDetails {
@@ -139,6 +140,7 @@ private:
     // at Destroy() time.
     uint32_t graphicsQueueFamily = 0;
     uint32_t presentQueueFamily = 0;
+
 };
 
 }

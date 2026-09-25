@@ -1,7 +1,7 @@
 #pragma once
 
-#include "VulkanContext.h"
-#include "VulkanDevice.h"
+#include "vulkanContext.h"
+#include "vulkanDevice.h"
 #include "VulkanSwapchain.h"
 #include "VulkanCommandBuffer.h"
 
@@ -70,6 +70,7 @@ namespace Euclase {
         void RecreateSwapchain();
 
     private:
+        std::shared_ptr<Platform> m_platform;
         VulkanContext context;
         std::shared_ptr<VulkanDevice> device;
         VulkanSwapchain swapchain;

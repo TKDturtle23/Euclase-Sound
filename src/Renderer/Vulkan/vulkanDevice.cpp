@@ -4,6 +4,8 @@
 #include <set>
 #include <string>
 #include <shaderc/shaderc.hpp>
+
+#include "VulkanBuffer.h"
 #include "vulkanPipeline.h"
 
 namespace Euclase {
@@ -158,10 +160,17 @@ void VulkanDevice::Destroy()
         vertexModule,
         fragmentModule,
         colorFormat,
-        depthFormat
+        depthFormat,
+        desc.constants,
+        desc.resources
     );
 }
-bool VulkanDevice::PickPhysicalDevice(
+
+    std::shared_ptr<GraphicsBuffer> VulkanDevice::CreateBuffer(size_t size, BufferUsage usage, BufferMemory memory) {
+        return std::make_shared<VulkanBuffer>(physicalDevice, device, size, usage, memory);
+    }
+
+    bool VulkanDevice::PickPhysicalDevice(
     const vk::raii::Instance& instance,
     const vk::raii::SurfaceKHR& surface)
 {

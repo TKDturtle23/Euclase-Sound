@@ -63,7 +63,7 @@ public:
         uint32_t callbackData
     );
     wl_surface* GetSurface() const;
-
+    void GetSize(int& width, int& height) const;
 private:
     bool ResizeBuffer();
     bool RequestFrame();

@@ -12,14 +12,16 @@ VulkanPipeline::VulkanPipeline(
     vk::ShaderModule vertexShader,
     vk::ShaderModule fragmentShader,
     vk::Format colorFormat,
-    vk::Format depthFormat)
+    vk::Format depthFormat,
+            std::vector<ShaderConstant> constants,
+            std::vector<ShaderResource> resources)
 {
     Create(
         device,
         vertexShader,
         fragmentShader,
         colorFormat,
-        depthFormat
+        depthFormat, constants, resources
     );
 }
 
@@ -28,13 +30,119 @@ void VulkanPipeline::Create(
     vk::ShaderModule vertexShader,
     vk::ShaderModule fragmentShader,
     vk::Format colorFormat,
-    vk::Format depthFormat)
+    vk::Format depthFormat,
+    std::vector<ShaderConstant> constants,
+    std::vector<ShaderResource> resources)
 {
+    std::vector<vk::PushConstantRange> pushConstantRanges;
+
+    for (const auto& constant : constants)
+    {
+        vk::ShaderStageFlags stages{};
+
+        switch (constant.stage)
+        {
+            case ShaderStage::Vertex:
+                stages = vk::ShaderStageFlagBits::eVertex;
+                break;
+
+            case ShaderStage::Fragment:
+                stages = vk::ShaderStageFlagBits::eFragment;
+                break;
+
+            case ShaderStage::Compute:
+                stages = vk::ShaderStageFlagBits::eCompute;
+                break;
+
+            case ShaderStage::AllGraphics:
+                stages = vk::ShaderStageFlagBits::eAllGraphics;
+                break;
+        }
+
+        pushConstantRanges.emplace_back(
+            stages,
+            constant.offset,
+            constant.size
+        );
+    }
+    std::vector<vk::DescriptorSetLayoutBinding> descriptorBindings;
+
+    for (const auto& resource : resources)
+    {
+        vk::DescriptorType type;
+
+        switch (resource.type)
+        {
+            case ResourceType::UniformBuffer:
+                type = vk::DescriptorType::eUniformBuffer;
+                break;
+
+            case ResourceType::StorageBuffer:
+                type = vk::DescriptorType::eStorageBuffer;
+                break;
+
+            case ResourceType::Texture:
+                type = vk::DescriptorType::eSampledImage;
+                break;
+
+            case ResourceType::Sampler:
+                type = vk::DescriptorType::eSampler;
+                break;
+
+            case ResourceType::CombinedImageSampler:
+                type = vk::DescriptorType::eCombinedImageSampler;
+                break;
+        }
+
+        vk::ShaderStageFlags stages{};
+
+        switch (resource.stage)
+        {
+            case ShaderStage::Vertex:
+                stages = vk::ShaderStageFlagBits::eVertex;
+                break;
+
+            case ShaderStage::Fragment:
+                stages = vk::ShaderStageFlagBits::eFragment;
+                break;
+
+            case ShaderStage::Compute:
+                stages = vk::ShaderStageFlagBits::eCompute;
+                break;
+
+            case ShaderStage::AllGraphics:
+                stages = vk::ShaderStageFlagBits::eAllGraphics;
+                break;
+        }
+
+        descriptorBindings.emplace_back(
+            resource.binding,
+            type,
+            1,
+            stages
+        );
+    }
+    vk::DescriptorSetLayoutCreateInfo descriptorLayoutInfo{
+        vk::DescriptorSetLayoutCreateFlagBits::ePushDescriptorKHR,
+        static_cast<uint32_t>(descriptorBindings.size()),
+        descriptorBindings.data()
+    };
+
+    descriptorSetLayout = {
+        device,
+        descriptorLayoutInfo
+    };
     //
     // Pipeline layout
     //
 
-    vk::PipelineLayoutCreateInfo layoutInfo{};
+    vk::PipelineLayoutCreateInfo layoutInfo{
+        {},
+        1,
+        &*descriptorSetLayout,
+        static_cast<uint32_t>(pushConstantRanges.size()),
+        pushConstantRanges.data()
+    };
 
     layout = vk::raii::PipelineLayout(
         device,

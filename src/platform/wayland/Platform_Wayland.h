@@ -6,7 +6,7 @@ namespace Euclase {
     class WaylandDisplay;
     class WaylandWindow;
 
-    class Platform_Wayland : public Platform{
+    class Platform_Wayland : public Platform {
     public:
         Platform_Wayland() = default;
         ~Platform_Wayland() override;
@@ -23,6 +23,9 @@ namespace Euclase {
 
         [[nodiscard]] WaylandDisplay* GetDisplay() const;
         [[nodiscard]] WaylandWindow* GetWindow() const;
+
+        bool ShouldClose() override;
+        void GetWindowSize(int &outWidth, int &outHeight) const override;
 
 
 

@@ -18,6 +18,7 @@ namespace Euclase {
         virtual bool create(int width, int height, const char *title) = 0;
         virtual void Disconnect() = 0;
         virtual void Dispatch() = 0;
+        virtual void GetWindowSize(int &outWidth, int &outHeight) const = 0;
     };
 } // Euclase
 

@@ -234,54 +234,48 @@ wl_surface* WaylandWindow::GetSurface() const
     return surface;
 }
 
-void WaylandWindow::SurfaceConfigure(
-    void* data,
-    xdg_surface* surface,
-    uint32_t serial)
-{
-    auto* window =
-        static_cast<WaylandWindow*>(data);
-
-    /*
-     * ack_configure must happen for every configure -- resize or not --
-     * or the compositor will consider the surface unresponsive. This is
-     * unaffected by who renders the contents.
-     */
-    xdg_surface_ack_configure(
-        surface,
-        serial
-    );
-
-    window->configured = true;
+void WaylandWindow::GetSize(int &width, int &height) const {
+    width = this->width;
+    height = this->height;
 }
 
-void WaylandWindow::ToplevelConfigure(
-    void* data,
-    xdg_toplevel* toplevel,
-    int32_t newWidth,
-    int32_t newHeight,
-    wl_array* states)
+void WaylandWindow::SurfaceConfigure(
+        void* data,
+        xdg_surface* surface,
+        uint32_t serial)
 {
-    auto* window =
-        static_cast<WaylandWindow*>(data);
+    auto* window = static_cast<WaylandWindow*>(data);
 
+    xdg_surface_ack_configure(surface, serial);
+
+    window->configured = true;
+
+    if (window->pendingWidth != window->width ||
+        window->pendingHeight != window->height)
+    {
+        window->resizePending = true;
+    }
+}
+    void WaylandWindow::ToplevelConfigure(
+        void* data,
+        xdg_toplevel* toplevel,
+        int32_t newWidth,
+        int32_t newHeight,
+        wl_array* states)
+{
+    auto* window = static_cast<WaylandWindow*>(data);
+    std::cout
+        << "Toplevel configure: "
+        << newWidth
+        << "x"
+        << newHeight
+        << std::endl;
+    // 0 means the compositor isn't specifying a size.
     if (newWidth > 0)
         window->pendingWidth = newWidth;
 
     if (newHeight > 0)
         window->pendingHeight = newHeight;
-
-    if (newWidth > 0 &&
-        newWidth != window->width) {
-
-        window->resizePending = true;
-    }
-
-    if (newHeight > 0 &&
-        newHeight != window->height) {
-
-        window->resizePending = true;
-    }
 }
 
 void WaylandWindow::ToplevelClose(
