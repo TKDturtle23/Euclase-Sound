@@ -33,27 +33,21 @@ int main(int argc, char* argv[])
 #else
         true;
 #endif
-    Box box{
-        .location = {0.0f, 0.0f},
-        .size = {0.5f, 0.5f},
-        .color = {1.0f, 0.0f, 0.0f, 1.0f}
-    };
-    renderer->Init(platform, enableValidation, 1280, 720);
 
+    renderer->Init(platform, enableValidation, 1280, 720);
+    Euclase::EuclaseGUI::Init(platform, renderer.get());
 
 
     while (!platform->ShouldClose()) {
         platform->Dispatch();  // pumps wl_display + fires WindowResize/WindowClose
         if (!renderer->BeginFrame())
             continue;
-        auto buffer = renderer->GetCommandBuffer();
-        pipeline->Bind(buffer);
-        buffer->PushResource(constant, pipeline.get());
-        buffer->Draw(6);
+        Euclase::EuclaseGUI::Draw();
+
         renderer->EndFrame();
         std::this_thread::sleep_for(std::chrono::milliseconds(3));
     }
-
+    Euclase::EuclaseGUI::Shutdown();
    // renderer.Shutdown();
     platform->Disconnect();
 

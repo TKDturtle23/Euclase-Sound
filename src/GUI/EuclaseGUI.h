@@ -23,7 +23,7 @@ namespace Euclase {
     };
     class EuclaseGUI {
     public:
-        static void Init(std::shared_ptr<Platform> platform, std::shared_ptr<GraphicsRenderer> renderer);
+        static void Init(std::shared_ptr<Platform> platform, GraphicsRenderer* renderer);
         static void Shutdown();
 
         static void BeginFrame();
@@ -35,8 +35,9 @@ namespace Euclase {
 
     private:
         static std::shared_ptr<Platform> platform;
-        static std::shared_ptr<GraphicsRenderer> renderer;
+        static GraphicsRenderer* renderer;
         static std::unique_ptr<GraphicsPipeline> pipeline;
+        static ShaderResource constant;
     };
 } // Euclase
 

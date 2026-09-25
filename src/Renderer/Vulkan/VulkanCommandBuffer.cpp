@@ -1,5 +1,6 @@
 #include "VulkanCommandBuffer.h"
 
+#include "VulkanBuffer.h"
 #include "vulkanPipeline.h"
 
 namespace Euclase {
@@ -70,6 +71,8 @@ namespace Euclase {
 
     void VulkanCommandBuffer::PushResource(const ShaderResource &resource, GraphicsPipeline* pipeline) {
         VulkanPipeline* vulkanPipeline = static_cast<VulkanPipeline*>(pipeline);
+        auto buffer = static_cast<VulkanBuffer*>(resource.buffer.get());
+        buffer->Write(resource.data, resource.size, 0);
         if (!pipeline)
             throw std::runtime_error("No pipeline bound");
 
@@ -106,7 +109,7 @@ namespace Euclase {
         write.descriptorType = descriptorType;
         write.pImageInfo = nullptr;
         vk::DescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = ;
+        bufferInfo.buffer = buffer->GetBuffer();
         bufferInfo.offset = 0;
         bufferInfo.range = VK_WHOLE_SIZE;
         write.pBufferInfo = &bufferInfo;

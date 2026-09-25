@@ -23,9 +23,10 @@ std::string ReadFile(const std::string& path)
 
 namespace Euclase {
      std::shared_ptr<Platform> EuclaseGUI::platform;
-     std::shared_ptr<GraphicsRenderer> EuclaseGUI::renderer;
+     GraphicsRenderer* EuclaseGUI::renderer;
     std::unique_ptr<GraphicsPipeline> EuclaseGUI::pipeline;
-    void EuclaseGUI::Init(std::shared_ptr<Platform> platform_, std::shared_ptr<GraphicsRenderer> renderer_) {
+    ShaderResource EuclaseGUI::constant;
+    void EuclaseGUI::Init(std::shared_ptr<Platform> platform_, GraphicsRenderer* renderer_) {
         platform = std::move(platform_);
         renderer = std::move(renderer_);
 
@@ -37,7 +38,7 @@ namespace Euclase {
         desc.depthFormat = Euclase::TextureFormat::Depth32F;
         desc.depthTest = true;
         desc.blending = true;
-        auto constant = Euclase::ShaderResource{0, Euclase::ResourceType::UniformBuffer, Euclase::ShaderStage::Vertex, nullptr, sizeof(Box)};
+        constant = Euclase::ShaderResource{0, Euclase::ResourceType::UniformBuffer, Euclase::ShaderStage::Vertex, nullptr, sizeof(Box)};
         constant.buffer = device->CreateBuffer(sizeof(Box), Euclase::BufferUsage::Uniform, Euclase::BufferMemory::CPUToGPU);
         desc.resources = {constant};
 
@@ -45,6 +46,10 @@ namespace Euclase {
     }
 
     void EuclaseGUI::Shutdown() {
+        constant.buffer = nullptr;
+        pipeline = nullptr;
+        renderer = nullptr;
+        platform = nullptr;
     }
 
     void EuclaseGUI::BeginFrame() {
@@ -54,6 +59,17 @@ namespace Euclase {
     }
 
     void EuclaseGUI::Draw() {
+        auto buffer = renderer->GetCommandBuffer();
+        Box box{
+            .location = {0.25f, 0.25f},
+            .size = {0.25f, 0.25f},
+            .color = {1.0f, 0.0f, 0.0f, 1.0f}
+        };
+        constant.data = &box;
+        constant.size = sizeof(Box);
+        pipeline->Bind(buffer);
+        buffer->PushResource(constant, pipeline.get());
+        buffer->Draw(6);
     }
 
     void EuclaseGUI::DrawRectangle(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t color) {
