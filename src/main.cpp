@@ -42,8 +42,10 @@ int main(int argc, char* argv[])
         platform->Dispatch();  // pumps wl_display + fires WindowResize/WindowClose
         if (!renderer->BeginFrame())
             continue;
+        Euclase::EuclaseGUI::BeginFrame();
         Euclase::EuclaseGUI::Draw();
 
+        Euclase::EuclaseGUI::EndFrame();
         renderer->EndFrame();
         std::this_thread::sleep_for(std::chrono::milliseconds(3));
     }

@@ -20,6 +20,7 @@ namespace Euclase {
         vec2 location;
         vec2 size;
         vec4 color;
+        vec2 frameSize;
     };
     class EuclaseGUI {
     public:
@@ -31,13 +32,14 @@ namespace Euclase {
 
         static void Draw();
 
-        void DrawRectangle(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t color);
+        static void DrawRectangle(uint32_t x, uint32_t y, float width, float height, uint32_t color);
 
     private:
         static std::shared_ptr<Platform> platform;
         static GraphicsRenderer* renderer;
         static std::unique_ptr<GraphicsPipeline> pipeline;
-        static ShaderResource constant;
+        static ShaderConstant constant;
+        static std::shared_ptr<CommandBuffer> buffer;
     };
 } // Euclase
 
