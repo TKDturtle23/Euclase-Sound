@@ -6,6 +6,8 @@ namespace Euclase {
     class WaylandDisplay;
     class WaylandWindow;
 
+
+
     class Platform_Wayland : public Platform {
     public:
         Platform_Wayland() = default;
@@ -27,11 +29,12 @@ namespace Euclase {
         bool ShouldClose() override;
         void GetWindowSize(int &outWidth, int &outHeight) const override;
 
-
+        void SetCursor(CursorShape shape) override;
 
     private:
         WaylandDisplay* display = nullptr;
         WaylandWindow* window = nullptr;
+
     };
 
 }

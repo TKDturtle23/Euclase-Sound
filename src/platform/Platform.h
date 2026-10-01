@@ -9,6 +9,18 @@
 
 #include <vulkan/vulkan.h>
 namespace Euclase {
+    enum class CursorShape {
+        Default,
+        Text,
+        Pointer,
+        ResizeHorizontal,
+        ResizeVertical,
+        ResizeTopLeft,
+        ResizeTopRight,
+        ResizeBottomLeft,
+        ResizeBottomRight,
+        Move
+    };
     class Platform {
         public:
         virtual ~Platform() = default;
@@ -19,6 +31,7 @@ namespace Euclase {
         virtual void Disconnect() = 0;
         virtual void Dispatch() = 0;
         virtual void GetWindowSize(int &outWidth, int &outHeight) const = 0;
+        virtual void SetCursor(CursorShape shape) = 0;
     };
 } // Euclase
 

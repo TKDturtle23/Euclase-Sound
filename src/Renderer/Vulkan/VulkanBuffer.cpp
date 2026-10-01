@@ -16,24 +16,22 @@ namespace Euclase {
           device(device),
           size(size)
     {
-        vk::BufferCreateInfo bufferInfo{
-            .size = size,
-            .usage = GetVulkanUsage(usage),
-            .sharingMode = vk::SharingMode::eExclusive
-        };
+        vk::BufferCreateInfo bufferInfo{};
+        bufferInfo.size = size;
+        bufferInfo.usage = GetVulkanUsage(usage);
+        bufferInfo.sharingMode = vk::SharingMode::eExclusive;
 
         buffer = vk::raii::Buffer(device, bufferInfo);
 
         vk::MemoryRequirements requirements =
             buffer.getMemoryRequirements();
 
-        vk::MemoryAllocateInfo allocateInfo{
-            .allocationSize = requirements.size,
-            .memoryTypeIndex = FindMemoryType(
-                requirements.memoryTypeBits,
-                GetVulkanMemoryProperties(memoryType)
-            )
-        };
+        vk::MemoryAllocateInfo allocateInfo{};
+        allocateInfo.allocationSize = requirements.size;
+        allocateInfo.memoryTypeIndex = FindMemoryType(
+            requirements.memoryTypeBits,
+            GetVulkanMemoryProperties(memoryType)
+        );
 
         memory = vk::raii::DeviceMemory(device, allocateInfo);
 

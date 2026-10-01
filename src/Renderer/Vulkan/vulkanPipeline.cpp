@@ -209,7 +209,9 @@ void VulkanPipeline::Create(
         VK_FALSE,
         VK_FALSE,
         vk::PolygonMode::eFill,
-        vk::CullModeFlagBits::eBack,
+        // UI geometry is generated in the vertex shader. Keep both winding
+        // orders visible so coordinate-system conversions cannot cull it.
+        vk::CullModeFlagBits::eNone,
         vk::FrontFace::eClockwise,
         VK_FALSE,
         0.0f,
@@ -250,13 +252,13 @@ void VulkanPipeline::Create(
     //
 
     vk::PipelineColorBlendAttachmentState colorBlendAttachment{
-        VK_FALSE,
-        vk::BlendFactor::eOne,
-        vk::BlendFactor::eZero,
-        vk::BlendOp::eAdd,
-        vk::BlendFactor::eOne,
-        vk::BlendFactor::eZero,
-        vk::BlendOp::eAdd,
+        VK_TRUE,                            // blendEnable
+        vk::BlendFactor::eSrcAlpha,         // srcColorBlendFactor
+        vk::BlendFactor::eOneMinusSrcAlpha, // dstColorBlendFactor
+        vk::BlendOp::eAdd,                  // colorBlendOp
+        vk::BlendFactor::eOne,              // srcAlphaBlendFactor
+        vk::BlendFactor::eOneMinusSrcAlpha, // dstAlphaBlendFactor
+        vk::BlendOp::eAdd,                  // alphaBlendOp
         vk::ColorComponentFlagBits::eR |
         vk::ColorComponentFlagBits::eG |
         vk::ColorComponentFlagBits::eB |

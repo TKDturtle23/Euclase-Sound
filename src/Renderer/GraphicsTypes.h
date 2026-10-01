@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include "GraphicsBuffer.h"
+#include "GraphicsTexture.h"
 namespace Euclase {
 
     enum class GraphicsAPI {
@@ -15,6 +16,7 @@ namespace Euclase {
         Undefined,
 
         RGBA8,
+        R8,
         BGRA8,
 
         RGBA16F,
@@ -58,6 +60,7 @@ namespace Euclase {
         const void* data;
         size_t size;
         std::shared_ptr<GraphicsBuffer> buffer;
+        std::shared_ptr<GraphicsTexture> texture;
     };
 
     struct ShaderConstant {

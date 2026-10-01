@@ -8,6 +8,7 @@
 
 #include "../GraphicsBuffer.h"
 #include "../GraphicsDevice.h"
+#include "VulkanTexture.h"
 namespace Euclase {
 
 class VulkanDevice final : public GraphicsDevice {
@@ -52,6 +53,7 @@ public:
             const GraphicsPipelineDesc& desc
         ) override;
     std::shared_ptr<GraphicsBuffer> CreateBuffer(size_t size, BufferUsage usage, BufferMemory memory) override;
+    std::shared_ptr<GraphicsTexture> CreateTexture(uint32_t width, uint32_t height, TextureFormat format, const void* pixels, size_t size) override;
 private:
     struct QueueFamilies {
         std::optional<uint32_t> graphics;

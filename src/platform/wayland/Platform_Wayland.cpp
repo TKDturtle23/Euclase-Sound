@@ -46,6 +46,7 @@ namespace Euclase {
             return false;
         }
 
+
         return true;
     }
 
@@ -88,5 +89,50 @@ namespace Euclase {
 
     void Platform_Wayland::GetWindowSize(int &outWidth, int &outHeight) const {
         return window->GetSize(outWidth, outHeight);
+    }
+
+    void Platform_Wayland::SetCursor(CursorShape shape)
+    {
+        switch (shape) {
+            case CursorShape::Default:
+                display->SetCursor("default");
+                break;
+
+            case CursorShape::Text:
+                display->SetCursor("text");
+                break;
+
+            case CursorShape::Pointer:
+                display->SetCursor("pointer");
+                break;
+
+            case CursorShape::ResizeHorizontal:
+                display->SetCursor("ew-resize");
+                break;
+
+            case CursorShape::ResizeVertical:
+                display->SetCursor("ns-resize");
+                break;
+
+            case CursorShape::ResizeTopLeft:
+                display->SetCursor("nwse-resize");
+                break;
+
+            case CursorShape::ResizeTopRight:
+                display->SetCursor("nesw-resize");
+                break;
+
+            case CursorShape::ResizeBottomLeft:
+                display->SetCursor("nesw-resize");
+                break;
+
+            case CursorShape::ResizeBottomRight:
+                display->SetCursor("nwse-resize");
+                break;
+
+            case CursorShape::Move:
+                display->SetCursor("move");
+                break;
+        }
     }
 }

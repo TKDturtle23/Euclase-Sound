@@ -169,6 +169,9 @@ void VulkanDevice::Destroy()
     std::shared_ptr<GraphicsBuffer> VulkanDevice::CreateBuffer(size_t size, BufferUsage usage, BufferMemory memory) {
         return std::make_shared<VulkanBuffer>(physicalDevice, device, size, usage, memory);
     }
+    std::shared_ptr<GraphicsTexture> VulkanDevice::CreateTexture(uint32_t width, uint32_t height, TextureFormat format, const void* pixels, size_t size) {
+        return std::make_shared<VulkanTexture>(physicalDevice, device, graphicsQueue, width, height, format, pixels, size);
+    }
 
     bool VulkanDevice::PickPhysicalDevice(
     const vk::raii::Instance& instance,

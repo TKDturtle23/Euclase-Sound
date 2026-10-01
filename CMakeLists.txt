@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 project(EuclaseSound LANGUAGES C CXX)
 
 find_package(Vulkan REQUIRED)
+find_package(Freetype REQUIRED)
 set(SHADERC_SKIP_TESTS ON CACHE BOOL "" FORCE)
 set(SHADERC_SKIP_EXAMPLES ON CACHE BOOL "" FORCE)
 add_subdirectory(submodules/SPIRV-Headers)
@@ -47,8 +48,14 @@ set(COMMON_SOURCES
         src/Renderer/Vulkan/VulkanBuffer.cpp
         src/Renderer/Vulkan/VulkanBuffer.h
         src/Renderer/GraphicsBuffer.h
+        src/Renderer/GraphicsTexture.h
+        src/Renderer/Vulkan/VulkanTexture.h
+        src/Renderer/Vulkan/VulkanTexture.cpp
         src/GUI/EuclaseGUI.cpp
         src/GUI/EuclaseGUI.h
+        src/GUI/Font.cpp
+        src/GUI/Font.h
+        src/vec.h
 )
 
 add_executable(EuclaseSound ${COMMON_SOURCES})
@@ -60,8 +67,32 @@ target_include_directories(EuclaseSound PRIVATE
 
 target_link_libraries(EuclaseSound PRIVATE
         Vulkan::Vulkan
+        Freetype::Freetype
         shaderc_combined
 )
+
+include(CTest)
+if(BUILD_TESTING)
+    find_file(EUCLASE_TEST_FONT
+            NAMES DejaVuSans.ttf FreeSans.otf NotoSans-Regular.ttf
+            PATHS
+                /usr/share/fonts/truetype/dejavu
+                /usr/share/fonts/gnu-free
+                /usr/share/fonts/noto
+                /usr/local/share/fonts
+    )
+    if(EUCLASE_TEST_FONT)
+        add_executable(EuclaseTextTests
+                tests/TextTests.cpp
+        )
+        target_include_directories(EuclaseTextTests PRIVATE "src/")
+        target_link_libraries(EuclaseTextTests PRIVATE Freetype::Freetype)
+        target_compile_definitions(EuclaseTextTests PRIVATE
+                EUCLASE_TEST_FONT="${EUCLASE_TEST_FONT}"
+        )
+        add_test(NAME EuclaseTextTests COMMAND EuclaseTextTests)
+    endif()
+endif()
 
 # -------------------------------------------------------------------------
 # Linux / Wayland
@@ -71,6 +102,8 @@ if(UNIX AND NOT APPLE)
     find_package(PkgConfig REQUIRED)
 
     pkg_check_modules(WAYLAND REQUIRED wayland-client)
+    pkg_check_modules(WAYLAND_CURSOR REQUIRED wayland-cursor)
+    pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
 
     find_program(WAYLAND_SCANNER wayland-scanner REQUIRED)
 
@@ -186,10 +219,14 @@ if(UNIX AND NOT APPLE)
 
     target_include_directories(EuclaseSound PRIVATE
             ${WAYLAND_INCLUDE_DIRS}
+            ${WAYLAND_CURSOR_INCLUDE_DIRS}
+            ${XKBCOMMON_INCLUDE_DIRS}
     )
 
     target_link_libraries(EuclaseSound PRIVATE
             ${WAYLAND_LIBRARIES}
+            ${WAYLAND_CURSOR_LIBRARIES}
+            ${XKBCOMMON_LIBRARIES}
     )
 
     # -------------------------------------------------------------------------

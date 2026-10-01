@@ -48,7 +48,11 @@ bool VulkanContext::Init(
     //
     // Instance extensions
     //
+    auto ex = context.enumerateInstanceExtensionProperties();
 
+    for (const auto& ext : ex) {
+        std::cout << ext.extensionName << '\n';
+    }
     std::vector<const char*> extensions;
 
     extensions.push_back(
@@ -71,6 +75,7 @@ bool VulkanContext::Init(
     {
         const auto availableLayers =
             context.enumerateInstanceLayerProperties();
+
 
         bool validationFound = false;
 
@@ -98,7 +103,10 @@ bool VulkanContext::Init(
             "VK_LAYER_KHRONOS_validation"
         );
     }
-
+    for (const auto& extension : extensions) {
+        std::cout << "Requesting instance extension: "
+                  << extension << '\n';
+    }
     //
     // Instance creation
     //
