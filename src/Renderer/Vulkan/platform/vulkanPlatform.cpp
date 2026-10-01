@@ -3,9 +3,10 @@
 //
 #include "vulkanPlatform.h"
 
+
+#ifdef Wayland
 #include "../../../platform/wayland/WaylandDisplay.h"
 #include "../../../platform/wayland/WaylandWindow.h"
-#ifdef Wayland
 #include "waylandVulkan.h"
 #include "../../../platform/wayland/Platform_Wayland.h"
 #elif defined(_WIN32)

@@ -29,36 +29,33 @@ int main(int argc, char* argv[]) {
 #else
       true;
 #endif
+    Box box{
+        .location = {0.0f, 0.0f},
+        .size = {0.5f, 0.5f},
+        .color = {1.0f, 0.0f, 0.0f, 1.0f}
+    };
+    renderer->Init(platform, enableValidation, 1280, 720);
 
-  if (!renderer->Init(platform, enableValidation, 1280, 720)) return 1;
-  Euclase::EuclaseGUI::Init(platform, renderer, "assets/fonts/arial/ARIAL.TTF", 32);
 
 
     Euclase::Window window;
     window.position = {100, 100};
     window.size = {500, 500};
 
-  while (!platform->ShouldClose()) {
-    platform->Dispatch();  // pumps wl_display + fires WindowResize/WindowClose
-    if (!renderer->BeginFrame()) continue;
-    Euclase::EuclaseGUI::BeginFrame();
+    while (!platform->ShouldClose()) {
+        platform->Dispatch();  // pumps wl_display + fires WindowResize/WindowClose
+        if (!renderer->BeginFrame())
+            continue;
+        auto buffer = renderer->GetCommandBuffer();
+        pipeline->Bind(buffer);
+        buffer->PushResource(constant, pipeline.get());
+        buffer->Draw(6);
+        renderer->EndFrame();
+        std::this_thread::sleep_for(std::chrono::milliseconds(3));
+    }
 
-    Euclase::EuclaseGUI::Begin(window);
-      Euclase::EuclaseGUI::Text("Hello, Euclase!", 2);
-
-      if (Euclase::EuclaseGUI::Button("Click me!", {200, 50}, {0.1, 0.1, 0.4, 1.0})) {
-        std::cout << "Button clicked!\n";
-      }
-      Euclase::EuclaseGUI::End();
-
-    Euclase::EuclaseGUI::EndFrame();
-    renderer->EndFrame();
-    std::this_thread::sleep_for(std::chrono::milliseconds(3));
-  }
-
-  Euclase::EuclaseGUI::Shutdown();
-  renderer->Destroy();
-  platform->Disconnect();
+   // renderer.Shutdown();
+    platform->Disconnect();
 
   return 0;
 }

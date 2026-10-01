@@ -197,25 +197,25 @@ namespace Euclase {
             }
         );
 
-        EventManager::RegisterEvent(
-            EventType::MouseMove,
-            [](Event event) {
-                MouseMoveCallback(
-                    event.dataDouble[0],
-                    event.dataDouble[1]
-                );
-            }
-        );
+namespace Euclase {
+     std::shared_ptr<Platform> EuclaseGUI::platform;
+     std::shared_ptr<GraphicsRenderer> EuclaseGUI::renderer;
+    std::unique_ptr<GraphicsPipeline> EuclaseGUI::pipeline;
+    void EuclaseGUI::Init(std::shared_ptr<Platform> platform_, std::shared_ptr<GraphicsRenderer> renderer_) {
+        platform = std::move(platform_);
+        renderer = std::move(renderer_);
 
-        EventManager::RegisterEvent(
-            EventType::MouseScroll,
-            [](Event event) {
-                MouseScrollCallback(
-                    event.dataDouble[0],
-                    event.dataDouble[1]
-                );
-            }
-        );
+        auto device = renderer->GetDevice();
+        Euclase::GraphicsPipelineDesc desc;
+        desc.vertexShader = ReadFile("shaders/triangle.vert");
+        desc.fragmentShader = ReadFile("shaders/triangle.frag");
+        desc.colorFormat = renderer->GetSwapchainFormat();
+        desc.depthFormat = Euclase::TextureFormat::Depth32F;
+        desc.depthTest = true;
+        desc.blending = true;
+        auto constant = Euclase::ShaderResource{0, Euclase::ResourceType::UniformBuffer, Euclase::ShaderStage::Vertex, nullptr, sizeof(Box)};
+        constant.buffer = device->CreateBuffer(sizeof(Box), Euclase::BufferUsage::Uniform, Euclase::BufferMemory::CPUToGPU);
+        desc.resources = {constant};
 
         EventManager::RegisterEvent(
             EventType::KeyPress,
@@ -233,23 +233,9 @@ namespace Euclase {
     }
 
     void EuclaseGUI::Shutdown() {
-        textPipeline = nullptr;
-        boxPipeline = nullptr;
-        font = nullptr;
-        FontAtlas = {};
-        Buffer = nullptr;
-
-        m_device = nullptr;
-        m_renderer = nullptr;
-        m_platform = nullptr;
     }
 
-void EuclaseGUI::BeginFrame() {
-    Buffer = m_renderer->GetCommandBuffer();
-
-
-    if (!resizingWindow) {
-        return;
+    void EuclaseGUI::BeginFrame() {
     }
 
 
@@ -355,200 +341,9 @@ void EuclaseGUI::BeginFrame() {
 }
 
     void EuclaseGUI::EndFrame() {
-        std::copy(
-    std::begin(mouseButtons),
-    std::end(mouseButtons),
-    std::begin(previousMouseButtons)
-);
-
-        Buffer = nullptr;
     }
 
-    void EuclaseGUI::Begin(Window &window) {
-        currentWindow.window = &window;
-        currentWindow.pointer = {
-            window.position.x + window.borderSize.x,
-            window.position.y + window.borderSize.y
-        };
-        currentWindow.position = {PixelsToUnits(window.position.x, true), PixelsToUnits(window.position.y, false)};
-        // size is calculated in End
-        currentWindow.size = {PixelsToUnits(std::max(currentWindow.window->size.x, window.minSize.x), true), PixelsToUnits(std::max(currentWindow.window->size.y, window.minSize.y), false)};
-        window.size = {std::max(currentWindow.window->size.x, window.minSize.x), std::max(currentWindow.window->size.y, window.minSize.y)};
-        // resizing
-        auto edge = GetResizeEdge(window);
-        ResizeSetCursor(edge);
-
-        if (edge != ResizeEdge::None &&
-            resizingWindow == nullptr &&
-            mouseButtons[static_cast<size_t>(MouseButton::Left)])
-        {
-            resizeEdge = edge;
-            resizeStartMouse = mousePosition;
-            resizeStartPosition = window.position;
-            resizeStartSize = window.size;
-            resizingWindow = &window;
-        }
-
-        Box box;
-        box.location = currentWindow.position;
-        box.size = currentWindow.size;
-        box.color = currentWindow.window->backgroundColor;
-        DrawBox(box);
-    }
-
-    void EuclaseGUI::End() {
-        constexpr float minWidth = 50.0f;
-        constexpr float minHeight = 30.0f;
-
-        currentWindow.window->minSize.x =
-            std::max(minWidth, currentWindow.contentSize.x);
-
-        currentWindow.window->minSize.y =
-            std::max(minHeight, currentWindow.contentSize.y);
-
-
-    }
-
-    void EuclaseGUI::Text(std::string_view text, float size,vec4 color) {
-
-        textPipeline->Bind(Buffer);
-        GlyphConstant glyphConstant;
-        Buffer->PushResource(FontAtlas, textPipeline.get());
-        float maxBottom = currentWindow.pointer.y;
-        for (auto c : text) {
-            auto glyph = font->GetGlyph(c);
-            float glyphTop =
-                currentWindow.pointer.y - glyph.bearing.y * size;
-
-            float glyphBottom =
-                glyphTop + glyph.size.y * size;
-            maxBottom = std::max(maxBottom, glyphBottom);
-            glyphConstant.location = {
-                PixelsToUnits(currentWindow.pointer.x + glyph.bearing.x* size, true),
-                PixelsToUnits(((currentWindow.pointer.y - glyph.bearing.y * size)+ font->GetFontSize() * size), false)
-            };
-            glyphConstant.size = {PixelsToUnits(glyph.size.x * size), PixelsToUnits(glyph.size.y * size, false)};
-            glyphConstant.Color = color;
-            glyphConstant.uv = glyph.uv;
-            glyphConstant.uvSize = glyph.uvSize;
-            Buffer->PushConstant(ShaderStage::Vertex, 0, &glyphConstant, sizeof(GlyphConstant), textPipeline.get());
-            Buffer->Draw(6);
-            currentWindow.pointer.x += glyph.advance * size;
-        }
-        currentWindow.contentSize.x =
-            std::max(
-                currentWindow.contentSize.x,
-                currentWindow.pointer.x - currentWindow.position.x
-            );
-
-        currentWindow.contentSize.y =
-            std::max(
-                currentWindow.contentSize.y,
-                maxBottom - currentWindow.position.y
-            );
-    }
-
-    bool EuclaseGUI::Button(std::string_view text, vec2 size, vec4 color)
-    {
-        const vec2 position = currentWindow.pointer;
-
-        const bool hovered =
-            mousePosition.x >= position.x &&
-            mousePosition.x <= position.x + size.x &&
-            mousePosition.y >= position.y &&
-            mousePosition.y <= position.y + size.y;
-
-        const bool pressed =
-            hovered &&
-            mouseButtons[static_cast<size_t>(MouseButton::Left)];
-
-        vec4 buttonColor = color;
-
-        if (pressed) {
-            buttonColor.x *= 0.7f;
-            buttonColor.y *= 0.7f;
-            buttonColor.z *= 0.7f;
-        }
-        else if (hovered) {
-            buttonColor.x *= 1.2f;
-            buttonColor.y *= 1.2f;
-            buttonColor.z *= 1.2f;
-        }
-
-        Box box;
-        box.location = PixelsToUnits(position);
-        box.size = PixelsToUnits(size);
-        box.color = buttonColor;
-
-        DrawBox(box);
-
-        // Center text
-        float textWidth = 0.0f;
-
-        for (char c : text) {
-            textWidth += font->GetGlyph(c).advance;
-        }
-
-        const float textHeight = font->GetFontSize();
-
-        const vec2 oldPointer = currentWindow.pointer;
-
-        currentWindow.pointer = {
-            position.x + (size.x - textWidth) * 0.5f,
-            position.y + (size.y - textHeight) * 0.5f
-        };
-
-        Text(
-            text,
-            1.0f,
-            {1.0f, 1.0f, 1.0f, 1.0f}
-        );
-
-        currentWindow.pointer = oldPointer;
-
-        // Advance layout
-        currentWindow.pointer.y += size.y;
-
-        currentWindow.contentSize.x =
-            std::max(
-                currentWindow.contentSize.x,
-                currentWindow.pointer.x + size.x - currentWindow.position.x
-            );
-
-        currentWindow.contentSize.y =
-            std::max(
-                currentWindow.contentSize.y,
-                currentWindow.pointer.y - currentWindow.position.y
-            );
-
-        return hovered && IsMouseReleased(MouseButton::Left);
-    }
-    void EuclaseGUI::DrawBox(Box &box) {
-        boxPipeline->Bind(Buffer);
-        Buffer->PushConstant(ShaderStage::Vertex, 0, &box, sizeof(Box), boxPipeline.get());
-        Buffer->Draw(6);
-
-    }
-
-    float EuclaseGUI::PixelsToUnits(float pixels, bool isWidth) {
-        auto [width, height] = m_renderer->GetExtent();
-        return pixels / static_cast<float>(isWidth ? width : height);
-
-    }
-
-    vec2 EuclaseGUI::PixelsToUnits(vec2 pixels) {
-        return {PixelsToUnits(pixels.x, true), PixelsToUnits(pixels.y, false)};
-    }
-
-    void EuclaseGUI::MouseButtonCallback(
-    int button,
-    int action,
-    int mods
-) {
-
-
-        mouseButtons[button] = action != 0;
-
+    void EuclaseGUI::Draw() {
     }
     void EuclaseGUI::MouseMoveCallback(
     double xpos,
@@ -562,13 +357,7 @@ void EuclaseGUI::BeginFrame() {
         mouseDelta = newPosition - mousePosition;
         mousePosition = newPosition;
 
-    }
-    void EuclaseGUI::MouseScrollCallback(
-    double xoffset,
-    double yoffset
-) {
-        mouseScroll.x += static_cast<float>(xoffset);
-        mouseScroll.y += static_cast<float>(yoffset);
+    void EuclaseGUI::DrawRectangle(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t color) {
     }
     void EuclaseGUI::KeyCallback(
     int key,
