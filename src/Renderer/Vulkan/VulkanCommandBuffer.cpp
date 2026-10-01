@@ -109,7 +109,21 @@ namespace Euclase {
         vk::DescriptorImageInfo imageInfo{};
         write.pImageInfo = nullptr;
         vk::DescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = ;
+        if (resource.type == ResourceType::CombinedImageSampler) {
+            auto* texture = dynamic_cast<VulkanTexture*>(resource.texture.get());
+            if (!texture) throw std::runtime_error("Texture resource has no Vulkan texture");
+            imageInfo.sampler = texture->GetSampler();
+            imageInfo.imageView = texture->GetView();
+            imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+            write.pImageInfo = &imageInfo;
+        } else if (!resource.buffer) {
+            throw std::runtime_error("Buffer resource has no buffer");
+        }
+        if (resource.type != ResourceType::CombinedImageSampler) {
+        auto* vulkanBuffer = dynamic_cast<VulkanBuffer*>(resource.buffer.get());
+        if (!vulkanBuffer)
+            throw std::runtime_error("Unsupported graphics buffer type");
+        bufferInfo.buffer = *vulkanBuffer->GetBuffer();
         bufferInfo.offset = 0;
         bufferInfo.range = VK_WHOLE_SIZE;
         write.pBufferInfo = &bufferInfo;
