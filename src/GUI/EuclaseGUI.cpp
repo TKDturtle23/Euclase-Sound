@@ -366,14 +366,20 @@ void EuclaseGUI::BeginFrame() {
 
     void EuclaseGUI::Begin(Window &window) {
         currentWindow.window = &window;
+
+        currentWindow.position = window.position;
+
         currentWindow.pointer = {
             window.position.x + window.borderSize.x,
             window.position.y + window.borderSize.y
         };
-        currentWindow.position = {PixelsToUnits(window.position.x, true), PixelsToUnits(window.position.y, false)};
-        // size is calculated in End
-        currentWindow.size = {PixelsToUnits(std::max(currentWindow.window->size.x, window.minSize.x), true), PixelsToUnits(std::max(currentWindow.window->size.y, window.minSize.y), false)};
-        window.size = {std::max(currentWindow.window->size.x, window.minSize.x), std::max(currentWindow.window->size.y, window.minSize.y)};
+
+        currentWindow.size = {
+            std::max(window.size.x, window.minSize.x),
+            std::max(window.size.y, window.minSize.y)
+        };
+
+        window.size = currentWindow.size;
         // resizing
         auto edge = GetResizeEdge(window);
         ResizeSetCursor(edge);
@@ -390,9 +396,9 @@ void EuclaseGUI::BeginFrame() {
         }
 
         Box box;
-        box.location = currentWindow.position;
-        box.size = currentWindow.size;
-        box.color = currentWindow.window->backgroundColor;
+        box.location = PixelsToUnits(currentWindow.position);
+        box.size = PixelsToUnits(currentWindow.size);
+        box.color = window.backgroundColor;
         DrawBox(box);
     }
 
@@ -410,7 +416,10 @@ void EuclaseGUI::BeginFrame() {
     }
 
     void EuclaseGUI::Text(std::string_view text, float size,vec4 color) {
-
+        const vec2 contentOrigin = {
+            currentWindow.position.x + currentWindow.window->borderSize.x,
+            currentWindow.position.y + currentWindow.window->borderSize.y
+        };
         textPipeline->Bind(Buffer);
         GlyphConstant glyphConstant;
         Buffer->PushResource(FontAtlas, textPipeline.get());
@@ -435,16 +444,15 @@ void EuclaseGUI::BeginFrame() {
             Buffer->Draw(6);
             currentWindow.pointer.x += glyph.advance * size;
         }
-        currentWindow.contentSize.x =
-            std::max(
-                currentWindow.contentSize.x,
-                currentWindow.pointer.x - currentWindow.position.x
-            );
-
+        currentWindow.contentSize.x = std::max(
+            currentWindow.contentSize.x,
+            currentWindow.pointer.x - contentOrigin.x
+        );
         currentWindow.contentSize.y =
             std::max(
                 currentWindow.contentSize.y,
-                maxBottom - currentWindow.position.y
+                maxBottom -
+                (currentWindow.position.y + currentWindow.window->borderSize.y)
             );
     }
 

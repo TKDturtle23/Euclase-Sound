@@ -61,6 +61,11 @@ namespace Euclase {
         size_t size;
         std::shared_ptr<GraphicsBuffer> buffer;
         std::shared_ptr<GraphicsTexture> texture;
+
+        ShaderResource() = default;
+
+        ShaderResource(int binding, ResourceType resource, ShaderStage stage, void* data, int size, const std::shared_ptr<Euclase::GraphicsBuffer> & buffer,
+                       const std::shared_ptr<Euclase::GraphicsTexture> & shared = nullptr);
     };
 
     struct ShaderConstant {
@@ -69,6 +74,28 @@ namespace Euclase {
 
         const void* data;
         size_t size;
+
+        ShaderConstant() = default;
+
+        ShaderConstant(ShaderStage vertex, int offset, void* data, size_t size);
     };
 
+    inline ShaderResource::ShaderResource(int binding, ResourceType resource, ShaderStage stage, void *data, int size,
+        const std::shared_ptr<Euclase::GraphicsBuffer> &buffer,
+        const std::shared_ptr<Euclase::GraphicsTexture> &shared) {
+        this->binding = binding;
+        this->type = resource;
+        this->stage = stage;
+        this->data = data;
+        this->size = size;
+        this->buffer = buffer;
+        this->texture = shared;
+    }
+
+    inline ShaderConstant::ShaderConstant(ShaderStage vertex, int offset, void *data, size_t size) {
+        stage = vertex;
+        this->offset = offset;
+        this->data = data;
+        this->size = size;
+    }
 }

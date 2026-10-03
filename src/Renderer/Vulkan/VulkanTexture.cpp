@@ -80,7 +80,7 @@ namespace Euclase {
         vk::FenceCreateInfo fenceInfo{};
         vk::raii::Fence fence(device, fenceInfo);
         queue.submit(submit, *fence);
-        device.waitForFences(*fence, vk::True, UINT64_MAX);
+        auto wait = device.waitForFences(*fence, vk::True, UINT64_MAX);
 
         vk::ImageViewCreateInfo viewInfo{};
         viewInfo.image = *image;

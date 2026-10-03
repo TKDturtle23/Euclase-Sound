@@ -142,7 +142,7 @@ void vulkanRenderer::RecreateSwapchain() {
 bool vulkanRenderer::BeginFrame() {
   vk::Fence fence = *inFlightFences[currentFrame];
 
-  device->GetDevice().waitForFences(fence, vk::True, UINT64_MAX);
+  auto wait = device->GetDevice().waitForFences(fence, vk::True, UINT64_MAX);
 
   m_platform->GetWindowSize(this->windowWidth, this->windowHeight);
 

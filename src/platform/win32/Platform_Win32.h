@@ -2,7 +2,12 @@
 
 #include "../Platform.h"
 #include <Windows.h>
+
+#include "platform/Event.h"
+
 namespace Euclase {
+     MouseButton Win32MouseButton(UINT message);
+     KeyCode Win32KeyToKeyCode(WPARAM wParam, LPARAM lParam);
 
 
 
@@ -26,6 +31,7 @@ namespace Euclase {
         bool ShouldClose() override;
 
         void GetWindowSize(int &outWidth, int &outHeight) const;
+        void SetCursor(CursorShape shape) override;
 
         [[nodiscard]] HWND GetWindow() const;
     private:
