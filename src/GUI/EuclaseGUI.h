@@ -60,8 +60,11 @@ class EuclaseGUI {
   static void End();
 
   static void Text(std::string_view text, float size, vec4 color = {1,1,1,1});
-  static bool Button(std::string_view text, vec2 size = {100, 25}, vec4 color = {1,1,1,1});
 
+  static void drawText(std::string_view text, float size, vec4 color);
+
+  static bool Button(std::string_view text, vec2 size = {100, 25}, vec4 color = {1,1,1,1});
+  static void SameLine(float spacing = 0.0f);
 private:
   static void DrawBox( Box& box);
   static float PixelsToUnits(float pixels, bool isWidth = true);
