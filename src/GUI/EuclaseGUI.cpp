@@ -39,7 +39,8 @@ namespace Euclase {
     vec2 EuclaseGUI::mousePosition{};
     vec2 EuclaseGUI::mouseDelta{};
     vec2 EuclaseGUI::mouseScroll{};
-
+    std::unordered_map<std::string, Window> EuclaseGUI::m_Windows;
+    Window* EuclaseGUI::HoveredWindow = nullptr;
     bool EuclaseGUI::previousMouseButtons[
         static_cast<size_t>(MouseButton::X2) + 1
     ]{};
@@ -60,7 +61,7 @@ namespace Euclase {
     vec2 EuclaseGUI::resizeStartMouse{};
     vec2 EuclaseGUI::resizeStartPosition{};
     vec2 EuclaseGUI::resizeStartSize{};
-
+    int EuclaseGUI::m_dockableArea;
 
     typedef struct {
         Window* window;
@@ -118,6 +119,7 @@ namespace Euclase {
         const float right  = window.position.x + window.size.x;
         const float top    = window.position.y;
         const float bottom = window.position.y + window.size.y;
+        const float header = window.position.y + window.HeaderHeight;
 
         const bool onLeft =
             mousePosition.x >= left - resizeBorder &&
@@ -134,6 +136,9 @@ namespace Euclase {
         const bool onBottom =
             mousePosition.y >= bottom - resizeBorder &&
             mousePosition.y <= bottom + resizeBorder;
+        const bool onHeader =
+            mousePosition.y >= window.position.y &&
+            mousePosition.y <= header;
 
         if (onLeft && onTop)
             return ResizeEdge::TopLeft;
@@ -158,6 +163,9 @@ namespace Euclase {
 
         if (onBottom)
             return ResizeEdge::Bottom;
+        if (onHeader) {
+            return ResizeEdge::Move;
+        }
 
         return ResizeEdge::None;
     }
@@ -197,6 +205,9 @@ namespace Euclase {
             case ResizeEdge::Bottom:
                 m_platform->SetCursor(CursorShape::ResizeVertical);
                 break;
+            case ResizeEdge::Move:
+                m_platform->SetCursor(CursorShape::Move);
+                break;
 
             default:
                 m_platform->SetCursor(CursorShape::Default);
@@ -204,16 +215,47 @@ namespace Euclase {
         }
     }
 
+    std::pair<DockingArea, Window*> EuclaseGUI::GetDockingArea(vec2 mousePosition) {
+        for (auto& [title, window] : m_Windows) {
+            if (title == resizingWindow->title) {
+                continue;
+            }
+            if (mousePosition.x >= window.position.x && mousePosition.x <= window.position.x + window.size.x &&
+                mousePosition.y >= window.position.y && mousePosition.y <= window.position.y + window.size.y) {
+                return std::make_pair(DockingArea::Middle, &window);
+            }
+        }
+        int winx, winy;
+        m_platform->GetWindowSize(winx, winy);
+        winx *= 2;
+        winy *= 2;
+        // main window
+        if (mousePosition.x <= m_dockableArea)
+            return std::make_pair(DockingArea::Left, nullptr);
+        if (mousePosition.x >=  winx - m_dockableArea)
+            return std::make_pair(DockingArea::Right, nullptr);
+        if (mousePosition.y <= m_dockableArea)
+            return std::make_pair(DockingArea::Up, nullptr);
+        if (mousePosition.y >=  winy - m_dockableArea)
+            return std::make_pair(DockingArea::Down, nullptr);
+
+        // middle
+        if (std::abs(mousePosition.x - winx / 2) <= m_dockableArea && std::abs(mousePosition.y - winy / 2) <= m_dockableArea)
+            return std::make_pair(DockingArea::Middle, nullptr);
+
+        return std::make_pair(DockingArea::None, nullptr);
+    }
 
     void EuclaseGUI::Init(
         std::shared_ptr<Platform> platform,
         std::shared_ptr<GraphicsRenderer> renderer,
         std::string fontPath,
-        uint32_t pixelHeight
+        uint32_t pixelHeight, int dockableArea
     ) {
         m_platform = std::move(platform);
         m_renderer = std::move(renderer);
         m_device = m_renderer->GetDevice();
+        m_dockableArea = dockableArea;
 
         GraphicsPipelineDesc boxDesc;
 
@@ -343,16 +385,60 @@ namespace Euclase {
     void EuclaseGUI::BeginFrame()
     {
         Buffer = m_renderer->GetCommandBuffer();
+        HoveredWindow = nullptr;
+        for (auto& [windowName, window] : m_Windows) {
+            if (mousePosition.x > window.position.x && mousePosition.x <= window.position.x + window.size.x &&
+                mousePosition.y > window.position.y && mousePosition.y <= window.position.y + window.size.y) {
+                HoveredWindow = &window;
+                break;
+                }
 
+        }
         if (!resizingWindow)
             return;
 
         // Left mouse button released -> stop resizing
         if (!mouseButtons[0]) {
+            if (resizeEdge == ResizeEdge::Move) {
+                auto docking = GetDockingArea(mousePosition);
+                if (docking.first != DockingArea::None) {
+                    if (docking.second == nullptr) {
+                        // application window
+                        int winx, winy;
+                        m_platform->GetWindowSize(winx, winy);
+                        winx *= 2;
+                        winy *= 2;
+                        switch (docking.first) {
+                            case DockingArea::Left: {
+                                resizingWindow->position = {0, 0};
+                                resizingWindow->size = {resizingWindow->size.x, static_cast<float>(winy)};
+                            } break;
+                            case DockingArea::Right: {
+                                resizingWindow->position = {winx - resizingWindow->size.x, 0};
+                                resizingWindow->size = {resizingWindow->size.x, static_cast<float>(winy)};
+                            } break;
+                            case DockingArea::Up: {
+                                resizingWindow->position = {0, 0};
+                                resizingWindow->size = {static_cast<float>(winx), resizingWindow->size.y};
+                            }break;
+                            case DockingArea::Down: {
+                                resizingWindow->position = {0, winy - resizingWindow->size.y};
+                                resizingWindow->size = {static_cast<float>(winx), resizingWindow->size.y};
+                            }break;
+                            case DockingArea::Middle: {
+                                resizingWindow->position = {0, 0};
+                                resizingWindow->size = {static_cast<float>(winx), static_cast<float>(winy)};
+                            }break;
+
+                        }
+                    }
+                }
+            }
             resizingWindow = nullptr;
             resizeEdge = ResizeEdge::None;
             return;
         }
+
 
         Window& window = *resizingWindow;
 
@@ -435,9 +521,85 @@ namespace Euclase {
                 newSize.y =
                     resizeStartSize.y + mouseDelta.y;
                 break;
+            case ResizeEdge::Move:
+                newPosition.x =
+                    resizeStartPosition.x + mouseDelta.x;
+                newPosition.y =
+                    resizeStartPosition.y + mouseDelta.y;
+                break;
 
             case ResizeEdge::None:
                 break;
+        }
+        if (resizeEdge == ResizeEdge::Move) {
+            auto docking = GetDockingArea(mousePosition);
+            int winx, winy;
+            m_platform->GetWindowSize(winx, winy);
+            winx *= 2;
+            winy *= 2;
+            if (docking.first != DockingArea::None) {
+
+                if (docking.second == nullptr) {
+                    // application window
+
+                    vec2 ghostSize;
+                    vec2 ghostPosition;
+                    switch (docking.first) {
+                        case DockingArea::Left: {
+                            ghostPosition = {0, 0};
+                            ghostSize = {resizingWindow->size.x, static_cast<float>(winy)};
+                        } break;
+                        case DockingArea::Right: {
+                            ghostPosition = {winx - resizingWindow->size.x, 0};
+                            ghostSize = {resizingWindow->size.x, static_cast<float>(winy)};
+                        } break;
+                        case DockingArea::Up: {
+                            ghostPosition = {0, 0};
+                            ghostSize = {static_cast<float>(winx), resizingWindow->size.y};
+                        }break;
+                        case DockingArea::Down: {
+                            ghostPosition = {0, winy - resizingWindow->size.y};
+                            ghostSize = {static_cast<float>(winx), resizingWindow->size.y};
+                        }break;
+                        case DockingArea::Middle: {
+                            ghostPosition = {0, 0};
+                            ghostSize = {static_cast<float>(winx), static_cast<float>(winy)};
+                        }break;
+
+                    }
+
+                    Box ghost;
+                    ghost.size = PixelsToUnits(ghostSize);
+                    ghost.location = PixelsToUnits(ghostPosition);
+                    ghost.color = {0.1f, 0.1f, 0.5f, 0.5f};
+                    DrawBox(ghost);
+                }
+
+            }
+            else {
+                // spacing for app window
+                Box ghost;
+                ghost.location = PixelsToUnits({0, 0}); // left
+                ghost.size = PixelsToUnits({static_cast<float>(m_dockableArea), static_cast<float>(winy)});
+                ghost.color = {0.1f, 0.1f, 0.5f, 0.25f};
+                DrawBox(ghost);
+
+                ghost.location = PixelsToUnits({static_cast<float>(winx - m_dockableArea), 0}); // right
+                DrawBox(ghost);
+
+                ghost.location = PixelsToUnits({0, 0});
+                ghost.size = PixelsToUnits({static_cast<float>(winx), static_cast<float>(m_dockableArea)});
+                DrawBox(ghost);
+
+                ghost.location = PixelsToUnits({0, static_cast<float>(winy - m_dockableArea)});
+                DrawBox(ghost);
+
+                ghost.size = PixelsToUnits({static_cast<float>(m_dockableArea), static_cast<float>(m_dockableArea)});
+                ghost.location = PixelsToUnits({static_cast<float>((winx / 2) - m_dockableArea / 2),
+                    static_cast<float>((winy / 2) - m_dockableArea / 2)});
+                DrawBox(ghost);
+
+            }
         }
 
 
@@ -475,6 +637,8 @@ namespace Euclase {
 
         window.position = newPosition;
         window.size = newSize;
+
+
     }
 
 
@@ -490,15 +654,14 @@ namespace Euclase {
     }
 
 
-    void EuclaseGUI::Begin(Window& window)
+    bool EuclaseGUI::Begin(Window& window)
     {
         currentWindow.window = &window;
-
         currentWindow.position = window.position;
 
         currentWindow.pointer = {
-            window.position.x + window.borderSize.x,
-            window.position.y + window.borderSize.y
+            static_cast<float>(window.position.x + window.borderSize.x +  (window.HasHeader ? window.HeaderHeight : 0)),
+            static_cast<float>(window.position.y + window.borderSize.y +  (window.HasHeader ? window.HeaderHeight : 0))
         };
 
         currentWindow.size = {
@@ -529,7 +692,13 @@ namespace Euclase {
         // Resizing
         auto edge = GetResizeEdge(window);
 
-        ResizeSetCursor(edge);
+        if (HoveredWindow) {
+            if (HoveredWindow->title == window.title) {
+                ResizeSetCursor(edge);
+            }
+        }
+
+
 
         if (edge != ResizeEdge::None &&
             resizingWindow == nullptr &&
@@ -559,6 +728,28 @@ namespace Euclase {
             window.backgroundColor;
 
         DrawBox(box);
+
+
+
+        // header
+        if (window.HasHeader) {
+            Box header;
+            header.color = window.HeaderColor;
+            header.location = PixelsToUnits(currentWindow.position);
+            header.size = PixelsToUnits({window.size.x, window.HeaderHeight});
+            DrawBox(header);
+            currentWindow.pointer = {
+                static_cast<float>(window.position.x + window.borderSize.x),
+                static_cast<float>(window.position.y + window.borderSize.y)
+            };
+            drawText(window.title, 1.0, {1.0, 1.0, 1.0, 1.0} );
+        }
+        currentWindow.pointer = {
+            static_cast<float>(window.position.x + window.borderSize.x +  (window.HasHeader ? window.HeaderHeight : 0)),
+            static_cast<float>(window.position.y + window.borderSize.y +  (window.HasHeader ? window.HeaderHeight : 0))
+        };
+        m_Windows[window.title] = window;
+        return true;
     }
 
 

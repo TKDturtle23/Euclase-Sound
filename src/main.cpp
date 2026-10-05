@@ -31,25 +31,39 @@ int main(int argc, char* argv[]) {
 #endif
 
   if (!renderer->Init(platform, enableValidation, 1280, 720)) return 1;
-  Euclase::EuclaseGUI::Init(platform, renderer, "assets/fonts/arial/ARIAL.TTF", 32);
+  Euclase::EuclaseGUI::Init(platform, renderer, "assets/fonts/arial/ARIAL.TTF", 32, 100);
 
 
     Euclase::Window window;
+  window.title = "Test!";
     window.position = {100, 100};
     window.size = {500, 500};
+
+    Euclase::Window window2;
+  window2.title = "Test2!";
+    window2.position = {200, 200};
+    window2.size = {500, 500};
+
+
 
   while (!platform->ShouldClose()) {
     platform->Dispatch();  // pumps wl_display + fires WindowResize/WindowClose
     if (!renderer->BeginFrame()) continue;
     Euclase::EuclaseGUI::BeginFrame();
 
-    Euclase::EuclaseGUI::Begin(window);
+    if (Euclase::EuclaseGUI::Begin(window)) {
       Euclase::EuclaseGUI::Text("Hello, Euclase!", 2);
 
       if (Euclase::EuclaseGUI::Button("Click me!", {200, 50}, {0.1, 0.1, 0.4, 1.0})) {
         std::cout << "Button clicked!\n";
       }
       Euclase::EuclaseGUI::End();
+    }
+    if (Euclase::EuclaseGUI::Begin(window2)) {
+      Euclase::EuclaseGUI::Text("testing", 2);
+      Euclase::EuclaseGUI::End();
+    }
+
 
     Euclase::EuclaseGUI::EndFrame();
     renderer->EndFrame();

@@ -36,6 +36,16 @@ struct Box {
     vec2 padding = { 8,  8};
     vec2 borderSize = { 4,  4};
     vec4 backgroundColor = { 0.2,  0.2,  0.2,  1};
+
+    // header
+    bool HasHeader = true;
+    float HeaderHeight = 50;
+    vec4 HeaderColor = { 0.15,  0.15,  0.15,  1};
+    bool Draggable = true;
+    bool Closeable = true;
+
+    // docking
+    bool Dockable = true;
   };
   enum class ResizeEdge {
     None,
@@ -46,17 +56,27 @@ struct Box {
     TopLeft,
     TopRight,
     BottomLeft,
-    BottomRight
+    BottomRight,
+    Move
 };
+  enum class DockingArea {
+    None,
+    Left,
+    Right,
+    Up,
+    Down,
+    Middle
+  };
 class EuclaseGUI {
  public:
   static void Init(std::shared_ptr<Platform>,
-                   std::shared_ptr<GraphicsRenderer>, std::string fontPath, uint32_t pixelHeight);
+                   std::shared_ptr<GraphicsRenderer>, std::string fontPath, uint32_t pixelHeight,
+                   int dockableArea /* how close you have to be to an edge or center to dock*/);
   static void Shutdown();
   static void BeginFrame();
   static void EndFrame();
 
-  static void Begin(Window &window);
+  static bool Begin(Window &window);
   static void End();
 
   static void Text(std::string_view text, float size, vec4 color = {1,1,1,1});
@@ -83,6 +103,8 @@ private:
 
   static void ResizeSetCursor(ResizeEdge edge);
 
+  static std::pair<DockingArea, Window *> GetDockingArea(vec2 mousePosition);
+
 private:
 
   static std::shared_ptr<Platform> m_platform;
@@ -106,10 +128,15 @@ private:
 
   static ResizeEdge resizeEdge;
   static Window* resizingWindow;
+  static Window* HoveredWindow;
 
   static vec2 resizeStartMouse;
   static vec2 resizeStartPosition;
   static vec2 resizeStartSize;
+
+  static int m_dockableArea;
+  static std::unordered_map<std::string, Window> m_Windows;
+
 
 };
 }  // namespace Euclase

@@ -10,3 +10,6 @@
 [submodule "submodules/SPIRV-Headers"]
 	path = submodules/SPIRV-Headers
 	url = https://github.com/KhronosGroup/Spirv-headers
+[submodule "submodules/freetype"]
+	path = submodules/freetype
+	url = https://github.com/freetype/freetype

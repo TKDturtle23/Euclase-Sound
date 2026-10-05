@@ -3,14 +3,13 @@ cmake_minimum_required(VERSION 3.20)
 project(EuclaseSound LANGUAGES C CXX)
 
 find_package(Vulkan REQUIRED)
-find_package(Freetype REQUIRED)
 set(SHADERC_SKIP_TESTS ON CACHE BOOL "" FORCE)
 set(SHADERC_SKIP_EXAMPLES ON CACHE BOOL "" FORCE)
 add_subdirectory(submodules/SPIRV-Headers)
 add_subdirectory(submodules/SPIRV-Tools)
 add_subdirectory(submodules/glslang)
-
 add_subdirectory(submodules/shaderc)
+add_subdirectory(submodules/freetype)
 
 # -------------------------------------------------------------------------
 # Common sources (platform-independent)
@@ -67,7 +66,7 @@ target_include_directories(EuclaseSound PRIVATE
 
 target_link_libraries(EuclaseSound PRIVATE
         Vulkan::Vulkan
-        Freetype::Freetype
+        freetype
         shaderc_combined
 )
 
@@ -240,6 +239,7 @@ elseif(WIN32)
 
             src/Renderer/Vulkan/platform/win32Vulkan.cpp
             src/Renderer/Vulkan/platform/win32Vulkan.h
+            src/platform/win32/Win32_Helpers.cpp
     )
 
     target_compile_definitions(EuclaseSound PRIVATE
