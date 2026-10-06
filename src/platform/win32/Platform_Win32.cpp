@@ -423,6 +423,7 @@ void Euclase::Platform_Win32::GetWindowSize(int& outWidth, int& outHeight) const
     } else {
         outWidth = outHeight = 0;
     }
+
 }
 
 void Euclase::Platform_Win32::SetCursor(CursorShape shape) {

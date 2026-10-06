@@ -292,4 +292,10 @@ namespace Euclase {
         << bitmapWidth << "x"
         << bitmapHeight << '\n';
 }
+
+    void Font::Destroy() {
+        FT_Done_Face(face);
+        FT_Done_FreeType(library);
+        texture = nullptr;
+    }
 }

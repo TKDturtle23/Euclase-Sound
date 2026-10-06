@@ -50,6 +50,7 @@ int main(int argc, char* argv[]) {
     platform->Dispatch();  // pumps wl_display + fires WindowResize/WindowClose
     if (!renderer->BeginFrame()) continue;
     Euclase::EuclaseGUI::BeginFrame();
+    Euclase::vec2 p, s;
 
     if (Euclase::EuclaseGUI::Begin(window)) {
       Euclase::EuclaseGUI::Text("Hello, Euclase!", 2);

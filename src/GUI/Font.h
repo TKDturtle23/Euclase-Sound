@@ -33,6 +33,7 @@ namespace Euclase {
             std::string path,
             int size
         );
+        void Destroy();
 
         struct GlyphInfo {
             vec2 uv;

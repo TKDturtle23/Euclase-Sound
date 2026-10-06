@@ -71,6 +71,13 @@ struct vec2 {
     constexpr float LengthSquared() const {
         return x * x + y * y;
     }
+
+    constexpr vec2 &operator*=(int i) {
+        x *= i;
+        y *= i;
+        return *this;
+    }
+
 };
 
 constexpr vec2 operator*(float scalar, const vec2& v) {
