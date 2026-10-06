@@ -31,7 +31,8 @@ class vulkanRenderer final : public GraphicsRenderer {
   std::shared_ptr<CommandBuffer> GetCommandBuffer() override {
     return commandBuffers[currentFrame];
   }
-
+  unsigned int GetFrameIndex() override { return currentFrame; }
+  unsigned int GetFrameCount() override { return kFramesInFlight; }
   Extent2D GetExtent() const override {
     const vk::Extent2D extent = swapchain.GetExtent();
 
@@ -63,7 +64,7 @@ class vulkanRenderer final : public GraphicsRenderer {
   std::shared_ptr<GraphicsDevice> GetDevice();
 
  private:
-  static constexpr uint32_t kFramesInFlight = 2;
+  static constexpr uint32_t kFramesInFlight = 3;
 
   bool CreateSyncObjects();
   void RecreateSwapchain();

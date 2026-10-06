@@ -22,6 +22,8 @@ class GraphicsRenderer {
   virtual void WaitIdle() = 0;
 
   virtual std::shared_ptr<CommandBuffer> GetCommandBuffer() = 0;
+    virtual unsigned int GetFrameIndex() = 0;
+    virtual unsigned int GetFrameCount() = 0;
 
   virtual std::shared_ptr<GraphicsDevice> GetDevice() = 0;
   virtual Extent2D GetExtent() const = 0;

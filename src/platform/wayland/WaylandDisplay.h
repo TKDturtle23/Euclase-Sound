@@ -77,6 +77,13 @@ namespace Euclase {
         static void KeyboardRepeatInfo(void*, wl_keyboard*, int32_t, int32_t);
 
         void SetCursor(const char* name);
+
+        static void PointerAxisSource(void*, wl_pointer*, uint32_t);
+
+        static void PointerAxisStop(void*, wl_pointer*, uint32_t, uint32_t);
+
+        static void PointerAxisDiscrete(void*, wl_pointer*, uint32_t, int32_t);
+
     private:
         wl_display* display = nullptr;
         wl_registry* registry = nullptr;

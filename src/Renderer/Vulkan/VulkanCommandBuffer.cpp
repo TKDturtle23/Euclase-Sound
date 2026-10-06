@@ -28,8 +28,8 @@ namespace Euclase {
         return true;
     }
 
-    void VulkanCommandBuffer::Draw(unsigned int vertices) {
-        commandBuffer.draw(vertices, 1, 0, 0);
+    void VulkanCommandBuffer::Draw(unsigned int vertices, unsigned int instances) {
+        commandBuffer.draw(vertices, instances, 0, 0);
     }
     void VulkanCommandBuffer::PushConstant(
         ShaderStage stage,
@@ -125,7 +125,7 @@ namespace Euclase {
             throw std::runtime_error("Unsupported graphics buffer type");
         bufferInfo.buffer = *vulkanBuffer->GetBuffer();
         bufferInfo.offset = 0;
-        bufferInfo.range = VK_WHOLE_SIZE;
+            bufferInfo.range = resource.size;
         write.pBufferInfo = &bufferInfo;
         }
 

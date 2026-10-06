@@ -1,5 +1,6 @@
 #include "EuclaseGUI.h"
 
+#include <algorithm>
 #include <utility>
 #include <fstream>
 #include <iostream>
@@ -9,10 +10,8 @@
 
 
 namespace Euclase {
-
     namespace util {
-        std::string ReadFile(const std::string& path)
-        {
+        std::string ReadFile(const std::string &path) {
             std::ifstream file(path);
 
             if (!file)
@@ -40,7 +39,7 @@ namespace Euclase {
     vec2 EuclaseGUI::mouseDelta{};
     vec2 EuclaseGUI::mouseScroll{};
     std::unordered_map<std::string, Window> EuclaseGUI::m_Windows;
-    Window* EuclaseGUI::HoveredWindow = nullptr;
+    Window *EuclaseGUI::HoveredWindow = nullptr;
     bool EuclaseGUI::previousMouseButtons[
         static_cast<size_t>(MouseButton::X2) + 1
     ]{};
@@ -54,47 +53,49 @@ namespace Euclase {
     ]{};
 
     ShaderResource EuclaseGUI::FontAtlas;
+    ShaderResource EuclaseGUI::TextData;
 
     ResizeEdge EuclaseGUI::resizeEdge = ResizeEdge::None;
-    Window* EuclaseGUI::resizingWindow = nullptr;
+    Window *EuclaseGUI::resizingWindow = nullptr;
 
     vec2 EuclaseGUI::resizeStartMouse{};
     vec2 EuclaseGUI::resizeStartPosition{};
     vec2 EuclaseGUI::resizeStartSize{};
     int EuclaseGUI::m_dockableArea;
+    std::vector<std::string> EuclaseGUI::m_WindowRenderOrder;
+    std::unordered_map<std::string, WindowRenderData> EuclaseGUI::m_WindowRenderData;
+    unsigned int EuclaseGUI::PipelineTextBufferSize;
+    GraphicsPipelineDesc EuclaseGUI::textDesc;
+    CurrentWindow EuclaseGUI::currentWindow;
 
-    typedef struct {
-        Window* window;
-
-        vec2 pointer;
-        vec2 size;
-        vec2 position;
-        vec2 contentSize;
-
-        // Layout state
-        float lineStartY;
-        float lineEndX;
-        float lineHeight;
-
-        bool sameLine;
-        float sameLineSpacing;
-    } CurrentWindow;
-
-
-    typedef struct {
-        vec2 location;
-        vec2 size;
-        vec4 Color;
-        vec2 uv;
-        vec2 uvSize;
-    } GlyphConstant;
-
-
-    static CurrentWindow currentWindow;
-
-
-    bool EuclaseGUI::IsMousePressed(MouseButton button)
+    void EuclaseGUI::BringWindowToFront(const std::string &windowName) // technically back so it renderes last
     {
+        auto it = std::find(
+            m_WindowRenderOrder.begin(),
+            m_WindowRenderOrder.end(),
+            windowName
+        );
+
+        if (it != m_WindowRenderOrder.end()) {
+            std::rotate(
+                it,
+                it + 1,
+                m_WindowRenderOrder.end()
+            );
+        }
+    }
+
+    void EuclaseGUI::AddWindow(const std::string &title) {
+        if (std::find(
+                m_WindowRenderOrder.begin(),
+                m_WindowRenderOrder.end(),
+                title
+            ) == m_WindowRenderOrder.end()) {
+            m_WindowRenderOrder.push_back(title);
+        }
+    }
+
+    bool EuclaseGUI::IsMousePressed(MouseButton button) {
         const size_t index = static_cast<size_t>(button);
 
         return mouseButtons[index] &&
@@ -102,8 +103,7 @@ namespace Euclase {
     }
 
 
-    bool EuclaseGUI::IsMouseReleased(MouseButton button)
-    {
+    bool EuclaseGUI::IsMouseReleased(MouseButton button) {
         const size_t index = static_cast<size_t>(button);
 
         return !mouseButtons[index] &&
@@ -111,34 +111,34 @@ namespace Euclase {
     }
 
 
-    ResizeEdge EuclaseGUI::GetResizeEdge(const Window& window)
-    {
+    ResizeEdge EuclaseGUI::GetResizeEdge(const Window &window) {
         constexpr float resizeBorder = 14.0f;
 
-        const float left   = window.position.x;
-        const float right  = window.position.x + window.size.x;
-        const float top    = window.position.y;
+        const float left = window.position.x;
+        const float right = window.position.x + window.size.x;
+        const float top = window.position.y;
         const float bottom = window.position.y + window.size.y;
         const float header = window.position.y + window.HeaderHeight;
 
         const bool onLeft =
-            mousePosition.x >= left - resizeBorder &&
-            mousePosition.x <= left + resizeBorder;
+                mousePosition.x >= left - resizeBorder &&
+                mousePosition.x <= left + resizeBorder;
 
         const bool onRight =
-            mousePosition.x >= right - resizeBorder &&
-            mousePosition.x <= right + resizeBorder;
+                mousePosition.x >= right - resizeBorder &&
+                mousePosition.x <= right + resizeBorder;
 
         const bool onTop =
-            mousePosition.y >= top - resizeBorder &&
-            mousePosition.y <= top + resizeBorder;
+                mousePosition.y >= top - resizeBorder &&
+                mousePosition.y <= top + resizeBorder;
 
         const bool onBottom =
-            mousePosition.y >= bottom - resizeBorder &&
-            mousePosition.y <= bottom + resizeBorder;
+                mousePosition.y >= bottom - resizeBorder &&
+                mousePosition.y <= bottom + resizeBorder;
         const bool onHeader =
-            mousePosition.y >= window.position.y &&
-            mousePosition.y <= header;
+                mousePosition.y >= window.position.y &&
+                mousePosition.y <= header && mousePosition.x >= window.position.x && mousePosition.x <= window.position.
+                x + window.size.x;
 
         if (onLeft && onTop)
             return ResizeEdge::TopLeft;
@@ -171,8 +171,7 @@ namespace Euclase {
     }
 
 
-    void EuclaseGUI::ResizeSetCursor(ResizeEdge edge)
-    {
+    void EuclaseGUI::ResizeSetCursor(ResizeEdge edge) {
         switch (edge) {
             case ResizeEdge::TopLeft:
                 m_platform->SetCursor(CursorShape::ResizeTopLeft);
@@ -215,8 +214,8 @@ namespace Euclase {
         }
     }
 
-    std::pair<DockingArea, Window*> EuclaseGUI::GetDockingArea(vec2 mousePosition) {
-        for (auto& [title, window] : m_Windows) {
+    std::pair<DockingArea, Window *> EuclaseGUI::GetDockingArea(vec2 mousePosition) {
+        for (auto &[title, window]: m_Windows) {
             if (title == resizingWindow->title) {
                 continue;
             }
@@ -232,15 +231,16 @@ namespace Euclase {
         // main window
         if (mousePosition.x <= m_dockableArea)
             return std::make_pair(DockingArea::Left, nullptr);
-        if (mousePosition.x >=  winx - m_dockableArea)
+        if (mousePosition.x >= winx - m_dockableArea)
             return std::make_pair(DockingArea::Right, nullptr);
         if (mousePosition.y <= m_dockableArea)
             return std::make_pair(DockingArea::Up, nullptr);
-        if (mousePosition.y >=  winy - m_dockableArea)
+        if (mousePosition.y >= winy - m_dockableArea)
             return std::make_pair(DockingArea::Down, nullptr);
 
         // middle
-        if (std::abs(mousePosition.x - winx / 2) <= m_dockableArea && std::abs(mousePosition.y - winy / 2) <= m_dockableArea)
+        if (std::abs(mousePosition.x - winx / 2) <= m_dockableArea && std::abs(mousePosition.y - winy / 2) <=
+            m_dockableArea)
             return std::make_pair(DockingArea::Middle, nullptr);
 
         return std::make_pair(DockingArea::None, nullptr);
@@ -286,7 +286,7 @@ namespace Euclase {
         );
 
 
-        GraphicsPipelineDesc textDesc;
+
 
         textDesc.colorFormat = m_renderer->GetSwapchainFormat();
         textDesc.vertexShader = util::ReadFile("shaders/text.vert");
@@ -295,14 +295,6 @@ namespace Euclase {
         textDesc.depthWrite = false;
         textDesc.blending = true;
 
-        textDesc.constants = {
-            ShaderConstant(
-                ShaderStage::Vertex,
-                0,
-                nullptr,
-                sizeof(GlyphConstant)
-            )
-        };
 
         FontAtlas = ShaderResource(
             0,
@@ -314,8 +306,18 @@ namespace Euclase {
             font->GetTexture()
         );
 
+        TextData = ShaderResource(
+            1,
+            ResourceType::StorageBuffer,
+            ShaderStage::Vertex,
+            nullptr,
+            sizeof(GlyphConstant) * 1000,
+            nullptr
+        );
+        PipelineTextBufferSize = 1000;
         textDesc.resources = {
-            FontAtlas
+            FontAtlas,
+            TextData
         };
 
         textPipeline = m_device->CreatePipeline(textDesc);
@@ -366,8 +368,7 @@ namespace Euclase {
     }
 
 
-    void EuclaseGUI::Shutdown()
-    {
+    void EuclaseGUI::Shutdown() {
         textPipeline = nullptr;
         boxPipeline = nullptr;
 
@@ -382,17 +383,15 @@ namespace Euclase {
     }
 
 
-    void EuclaseGUI::BeginFrame()
-    {
+    void EuclaseGUI::BeginFrame() {
         Buffer = m_renderer->GetCommandBuffer();
         HoveredWindow = nullptr;
-        for (auto& [windowName, window] : m_Windows) {
+        for (auto &[windowName, window]: m_Windows) {
             if (mousePosition.x > window.position.x && mousePosition.x <= window.position.x + window.size.x &&
                 mousePosition.y > window.position.y && mousePosition.y <= window.position.y + window.size.y) {
                 HoveredWindow = &window;
                 break;
-                }
-
+            }
         }
         if (!resizingWindow)
             return;
@@ -412,24 +411,28 @@ namespace Euclase {
                             case DockingArea::Left: {
                                 resizingWindow->position = {0, 0};
                                 resizingWindow->size = {resizingWindow->size.x, static_cast<float>(winy)};
-                            } break;
+                            }
+                            break;
                             case DockingArea::Right: {
                                 resizingWindow->position = {winx - resizingWindow->size.x, 0};
                                 resizingWindow->size = {resizingWindow->size.x, static_cast<float>(winy)};
-                            } break;
+                            }
+                            break;
                             case DockingArea::Up: {
                                 resizingWindow->position = {0, 0};
                                 resizingWindow->size = {static_cast<float>(winx), resizingWindow->size.y};
-                            }break;
+                            }
+                            break;
                             case DockingArea::Down: {
                                 resizingWindow->position = {0, winy - resizingWindow->size.y};
                                 resizingWindow->size = {static_cast<float>(winx), resizingWindow->size.y};
-                            }break;
+                            }
+                            break;
                             case DockingArea::Middle: {
                                 resizingWindow->position = {0, 0};
                                 resizingWindow->size = {static_cast<float>(winx), static_cast<float>(winy)};
-                            }break;
-
+                            }
+                            break;
                         }
                     }
                 }
@@ -440,10 +443,10 @@ namespace Euclase {
         }
 
 
-        Window& window = *resizingWindow;
+        Window &window = *resizingWindow;
 
         const vec2 mouseDelta =
-            mousePosition - resizeStartMouse;
+                mousePosition - resizeStartMouse;
 
         vec2 newPosition = resizeStartPosition;
         vec2 newSize = resizeStartSize;
@@ -454,78 +457,78 @@ namespace Euclase {
         switch (resizeEdge) {
             case ResizeEdge::Left:
                 newPosition.x =
-                    resizeStartPosition.x + mouseDelta.x;
+                        resizeStartPosition.x + mouseDelta.x;
 
                 newSize.x =
-                    resizeStartSize.x - mouseDelta.x;
+                        resizeStartSize.x - mouseDelta.x;
                 break;
 
             case ResizeEdge::Right:
                 newSize.x =
-                    resizeStartSize.x + mouseDelta.x;
+                        resizeStartSize.x + mouseDelta.x;
                 break;
 
             case ResizeEdge::Top:
                 newPosition.y =
-                    resizeStartPosition.y + mouseDelta.y;
+                        resizeStartPosition.y + mouseDelta.y;
 
                 newSize.y =
-                    resizeStartSize.y - mouseDelta.y;
+                        resizeStartSize.y - mouseDelta.y;
                 break;
 
             case ResizeEdge::Bottom:
                 newSize.y =
-                    resizeStartSize.y + mouseDelta.y;
+                        resizeStartSize.y + mouseDelta.y;
                 break;
 
             case ResizeEdge::TopLeft:
                 newPosition.x =
-                    resizeStartPosition.x + mouseDelta.x;
+                        resizeStartPosition.x + mouseDelta.x;
 
                 newSize.x =
-                    resizeStartSize.x - mouseDelta.x;
+                        resizeStartSize.x - mouseDelta.x;
 
                 newPosition.y =
-                    resizeStartPosition.y + mouseDelta.y;
+                        resizeStartPosition.y + mouseDelta.y;
 
                 newSize.y =
-                    resizeStartSize.y - mouseDelta.y;
+                        resizeStartSize.y - mouseDelta.y;
                 break;
 
             case ResizeEdge::TopRight:
                 newSize.x =
-                    resizeStartSize.x + mouseDelta.x;
+                        resizeStartSize.x + mouseDelta.x;
 
                 newPosition.y =
-                    resizeStartPosition.y + mouseDelta.y;
+                        resizeStartPosition.y + mouseDelta.y;
 
                 newSize.y =
-                    resizeStartSize.y - mouseDelta.y;
+                        resizeStartSize.y - mouseDelta.y;
                 break;
 
             case ResizeEdge::BottomLeft:
                 newPosition.x =
-                    resizeStartPosition.x + mouseDelta.x;
+                        resizeStartPosition.x + mouseDelta.x;
 
                 newSize.x =
-                    resizeStartSize.x - mouseDelta.x;
+                        resizeStartSize.x - mouseDelta.x;
 
                 newSize.y =
-                    resizeStartSize.y + mouseDelta.y;
+                        resizeStartSize.y + mouseDelta.y;
                 break;
 
             case ResizeEdge::BottomRight:
                 newSize.x =
-                    resizeStartSize.x + mouseDelta.x;
+                        resizeStartSize.x + mouseDelta.x;
 
                 newSize.y =
-                    resizeStartSize.y + mouseDelta.y;
+                        resizeStartSize.y + mouseDelta.y;
                 break;
             case ResizeEdge::Move:
                 newPosition.x =
-                    resizeStartPosition.x + mouseDelta.x;
+                        resizeStartPosition.x + mouseDelta.x;
                 newPosition.y =
-                    resizeStartPosition.y + mouseDelta.y;
+                        resizeStartPosition.y + mouseDelta.y;
                 break;
 
             case ResizeEdge::None:
@@ -538,7 +541,6 @@ namespace Euclase {
             winx *= 2;
             winy *= 2;
             if (docking.first != DockingArea::None) {
-
                 if (docking.second == nullptr) {
                     // application window
 
@@ -548,24 +550,28 @@ namespace Euclase {
                         case DockingArea::Left: {
                             ghostPosition = {0, 0};
                             ghostSize = {resizingWindow->size.x, static_cast<float>(winy)};
-                        } break;
+                        }
+                        break;
                         case DockingArea::Right: {
                             ghostPosition = {winx - resizingWindow->size.x, 0};
                             ghostSize = {resizingWindow->size.x, static_cast<float>(winy)};
-                        } break;
+                        }
+                        break;
                         case DockingArea::Up: {
                             ghostPosition = {0, 0};
                             ghostSize = {static_cast<float>(winx), resizingWindow->size.y};
-                        }break;
+                        }
+                        break;
                         case DockingArea::Down: {
                             ghostPosition = {0, winy - resizingWindow->size.y};
                             ghostSize = {static_cast<float>(winx), resizingWindow->size.y};
-                        }break;
+                        }
+                        break;
                         case DockingArea::Middle: {
                             ghostPosition = {0, 0};
                             ghostSize = {static_cast<float>(winx), static_cast<float>(winy)};
-                        }break;
-
+                        }
+                        break;
                     }
 
                     Box ghost;
@@ -574,9 +580,7 @@ namespace Euclase {
                     ghost.color = {0.1f, 0.1f, 0.5f, 0.5f};
                     DrawBox(ghost);
                 }
-
-            }
-            else {
+            } else {
                 // spacing for app window
                 Box ghost;
                 ghost.location = PixelsToUnits({0, 0}); // left
@@ -595,10 +599,11 @@ namespace Euclase {
                 DrawBox(ghost);
 
                 ghost.size = PixelsToUnits({static_cast<float>(m_dockableArea), static_cast<float>(m_dockableArea)});
-                ghost.location = PixelsToUnits({static_cast<float>((winx / 2) - m_dockableArea / 2),
-                    static_cast<float>((winy / 2) - m_dockableArea / 2)});
+                ghost.location = PixelsToUnits({
+                    static_cast<float>((winx / 2) - m_dockableArea / 2),
+                    static_cast<float>((winy / 2) - m_dockableArea / 2)
+                });
                 DrawBox(ghost);
-
             }
         }
 
@@ -607,12 +612,11 @@ namespace Euclase {
         if (newSize.x < minWidth) {
             if (resizeEdge == ResizeEdge::Left ||
                 resizeEdge == ResizeEdge::TopLeft ||
-                resizeEdge == ResizeEdge::BottomLeft)
-            {
+                resizeEdge == ResizeEdge::BottomLeft) {
                 newPosition.x =
-                    resizeStartPosition.x +
-                    resizeStartSize.x -
-                    minWidth;
+                        resizeStartPosition.x +
+                        resizeStartSize.x -
+                        minWidth;
             }
 
             newSize.x = minWidth;
@@ -623,12 +627,11 @@ namespace Euclase {
         if (newSize.y < minHeight) {
             if (resizeEdge == ResizeEdge::Top ||
                 resizeEdge == ResizeEdge::TopLeft ||
-                resizeEdge == ResizeEdge::TopRight)
-            {
+                resizeEdge == ResizeEdge::TopRight) {
                 newPosition.y =
-                    resizeStartPosition.y +
-                    resizeStartSize.y -
-                    minHeight;
+                        resizeStartPosition.y +
+                        resizeStartSize.y -
+                        minHeight;
             }
 
             newSize.y = minHeight;
@@ -637,13 +640,10 @@ namespace Euclase {
 
         window.position = newPosition;
         window.size = newSize;
-
-
     }
 
 
-    void EuclaseGUI::EndFrame()
-    {
+    void EuclaseGUI::EndFrame() {
         std::copy(
             std::begin(mouseButtons),
             std::end(mouseButtons),
@@ -654,14 +654,19 @@ namespace Euclase {
     }
 
 
-    bool EuclaseGUI::Begin(Window& window)
-    {
+    bool EuclaseGUI::Begin(Window &window) {
+        AddWindow(window.title);
+        if (window.TextBuffers.empty()) {
+            for (int i = 0; i < m_renderer->GetFrameCount(); i++) {
+                window.TextBuffers.push_back(m_device->CreateBuffer(sizeof(GlyphConstant) * 1000, BufferUsage::Storage, BufferMemory::CPUToGPU));
+            }
+        }
         currentWindow.window = &window;
         currentWindow.position = window.position;
 
         currentWindow.pointer = {
-            static_cast<float>(window.position.x + window.borderSize.x +  (window.HasHeader ? window.HeaderHeight : 0)),
-            static_cast<float>(window.position.y + window.borderSize.y +  (window.HasHeader ? window.HeaderHeight : 0))
+            static_cast<float>(window.position.x + window.borderSize.x + (window.HasHeader ? window.HeaderHeight : 0)),
+            static_cast<float>(window.position.y + window.borderSize.y + (window.HasHeader ? window.HeaderHeight : 0))
         };
 
         currentWindow.size = {
@@ -678,10 +683,10 @@ namespace Euclase {
 
         // Layout state
         currentWindow.lineStartY =
-            currentWindow.pointer.y;
+                currentWindow.pointer.y;
 
         currentWindow.lineEndX =
-            currentWindow.pointer.x;
+                currentWindow.pointer.x;
 
         currentWindow.lineHeight = 0.0f;
 
@@ -699,13 +704,11 @@ namespace Euclase {
         }
 
 
-
         if (edge != ResizeEdge::None &&
             resizingWindow == nullptr &&
             mouseButtons[
                 static_cast<size_t>(MouseButton::Left)
-            ])
-        {
+            ] && HoveredWindow) {
             resizeEdge = edge;
 
             resizeStartMouse = mousePosition;
@@ -713,22 +716,22 @@ namespace Euclase {
             resizeStartSize = window.size;
 
             resizingWindow = &window;
+            BringWindowToFront(window.title);
         }
 
 
         Box box;
 
         box.location =
-            PixelsToUnits(currentWindow.position);
+                PixelsToUnits(currentWindow.position);
 
         box.size =
-            PixelsToUnits(currentWindow.size);
+                PixelsToUnits(currentWindow.size);
 
         box.color =
-            window.backgroundColor;
+                window.backgroundColor;
 
-        DrawBox(box);
-
+        currentWindow.renderData.boxes.push_back(box);
 
 
         // header
@@ -737,446 +740,124 @@ namespace Euclase {
             header.color = window.HeaderColor;
             header.location = PixelsToUnits(currentWindow.position);
             header.size = PixelsToUnits({window.size.x, window.HeaderHeight});
-            DrawBox(header);
+            currentWindow.renderData.boxes.push_back(header);
             currentWindow.pointer = {
                 static_cast<float>(window.position.x + window.borderSize.x),
                 static_cast<float>(window.position.y + window.borderSize.y)
             };
-            drawText(window.title, 1.0, {1.0, 1.0, 1.0, 1.0} );
+            drawText(window.title, 1.0, {1.0, 1.0, 1.0, 1.0});
         }
         currentWindow.pointer = {
-            static_cast<float>(window.position.x + window.borderSize.x +  (window.HasHeader ? window.HeaderHeight : 0)),
-            static_cast<float>(window.position.y + window.borderSize.y +  (window.HasHeader ? window.HeaderHeight : 0))
+            static_cast<float>(window.position.x + window.borderSize.x + (window.HasHeader ? window.HeaderHeight : 0)),
+            static_cast<float>(window.position.y + window.borderSize.y + (window.HasHeader ? window.HeaderHeight : 0))
         };
         m_Windows[window.title] = window;
         return true;
     }
 
 
-    void EuclaseGUI::End()
-    {
+    void EuclaseGUI::End() {
         constexpr float minWidth = 50.0f;
         constexpr float minHeight = 30.0f;
 
         // Include the final line in the content size.
         currentWindow.contentSize.x =
-            std::max(
-                currentWindow.contentSize.x,
-                currentWindow.lineEndX -
-                (
-                    currentWindow.position.x +
-                    currentWindow.window->borderSize.x
-                )
-            );
+                std::max(
+                    currentWindow.contentSize.x,
+                    currentWindow.lineEndX -
+                    (
+                        currentWindow.position.x +
+                        currentWindow.window->borderSize.x
+                    )
+                );
 
         currentWindow.contentSize.y =
-            std::max(
-                currentWindow.contentSize.y,
-                currentWindow.lineStartY +
-                currentWindow.lineHeight -
-                (
-                    currentWindow.position.y +
-                    currentWindow.window->borderSize.y
-                )
-            );
+                std::max(
+                    currentWindow.contentSize.y,
+                    currentWindow.lineStartY +
+                    currentWindow.lineHeight -
+                    (
+                        currentWindow.position.y +
+                        currentWindow.window->borderSize.y
+                    )
+                );
 
 
         currentWindow.window->minSize.x =
-            std::max(
-                minWidth,
-                currentWindow.contentSize.x
-            );
+                std::max(
+                    minWidth,
+                    currentWindow.contentSize.x
+                );
 
         currentWindow.window->minSize.y =
-            std::max(
-                minHeight,
-                currentWindow.contentSize.y
+                std::max(
+                    minHeight,
+                    currentWindow.contentSize.y
+                );
+        m_WindowRenderData[currentWindow.window->title] = currentWindow.renderData;
+        currentWindow.renderData = {};
+    }
+
+    void EuclaseGUI::Render() {
+        unsigned int FrameIndex = m_renderer->GetFrameIndex();
+        for (auto window: m_WindowRenderOrder) {
+            auto data = m_WindowRenderData[window];
+            // boxes
+            for (auto box: data.boxes) {
+                DrawBox(box);
+            }
+
+            textPipeline->Bind(Buffer);
+
+            Buffer->PushResource(
+                FontAtlas,
+                textPipeline.get()
             );
+
+            if (m_Windows[window].currentBufferGlyphCount < data.texts.size()) {
+                m_renderer->WaitIdle();
+                for (int i = 0; i < m_renderer->GetFrameCount(); i++) {
+                    m_Windows[window].TextBuffers[i] = m_device->CreateBuffer(sizeof(GlyphConstant) * data.texts.size() + 500, BufferUsage::Storage, BufferMemory::CPUToGPU);
+                }
+                m_Windows[window].currentBufferGlyphCount = data.texts.size();
+                if (PipelineTextBufferSize < data.texts.size()) {
+                    TextData.size = sizeof(GlyphConstant) * data.texts.size();
+                    PipelineTextBufferSize = data.texts.size();
+                    textDesc.resources = {
+                        FontAtlas,
+                        TextData
+                    };
+                    textPipeline = m_device->CreatePipeline(textDesc);
+                }
+            }
+
+                m_Windows[window].TextBuffers[FrameIndex]->Write(
+                    data.texts.data(),
+                    data.texts.size() * sizeof(GlyphConstant)
+                );
+                TextData.buffer = m_Windows[window].TextBuffers[FrameIndex];
+
+                Buffer->PushResource(
+                    TextData,
+                    textPipeline.get()
+                );
+
+                Buffer->Draw(
+                    6,
+                    static_cast<unsigned int>(data.texts.size())
+                );
+
+        }
     }
 
 
-    void EuclaseGUI::SameLine(float spacing)
-    {
+    void EuclaseGUI::SameLine(float spacing) {
         currentWindow.sameLine = true;
         currentWindow.sameLineSpacing = spacing;
     }
 
 
-    void EuclaseGUI::Text(
-        std::string_view text,
-        float size,
-        vec4 color
-    ) {
-        const float contentStartX =
-            currentWindow.position.x +
-            currentWindow.window->borderSize.x;
-
-        /*
-         * If SameLine() was not called, finish the previous
-         * line and start a new one.
-         */
-        if (!currentWindow.sameLine) {
-            currentWindow.lineStartY +=
-                currentWindow.lineHeight;
-
-            currentWindow.lineHeight = 0.0f;
-
-            currentWindow.lineEndX =
-                contentStartX;
-        }
-
-        /*
-         * If SameLine() was called, continue from the
-         * previous item's right edge.
-         */
-        currentWindow.pointer = {
-            currentWindow.lineEndX +
-            (
-                currentWindow.sameLine
-                    ? currentWindow.sameLineSpacing
-                    : 0.0f
-            ),
-
-            currentWindow.lineStartY
-        };
-
-        currentWindow.sameLine = false;
-
-
-        const float itemStartX =
-            currentWindow.pointer.x;
-
-
-        textPipeline->Bind(Buffer);
-
-        GlyphConstant glyphConstant;
-
-        Buffer->PushResource(
-            FontAtlas,
-            textPipeline.get()
-        );
-
-
-        for (auto c : text) {
-            auto glyph = font->GetGlyph(c);
-
-            glyphConstant.location = {
-                PixelsToUnits(
-                    currentWindow.pointer.x +
-                    glyph.bearing.x * size,
-                    true
-                ),
-
-                PixelsToUnits(
-                    currentWindow.pointer.y -
-                    glyph.bearing.y * size +
-                    font->GetFontSize() * size,
-                    false
-                )
-            };
-
-            glyphConstant.size = {
-                PixelsToUnits(
-                    glyph.size.x * size
-                ),
-
-                PixelsToUnits(
-                    glyph.size.y * size,
-                    false
-                )
-            };
-
-            glyphConstant.Color = color;
-            glyphConstant.uv = glyph.uv;
-            glyphConstant.uvSize = glyph.uvSize;
-
-
-            Buffer->PushConstant(
-                ShaderStage::Vertex,
-                0,
-                &glyphConstant,
-                sizeof(GlyphConstant),
-                textPipeline.get()
-            );
-
-            Buffer->Draw(6);
-
-
-            currentWindow.pointer.x +=
-                glyph.advance * size;
-        }
-
-
-        const float width =
-            currentWindow.pointer.x -
-            itemStartX;
-
-         float height =
-            font->GetFontSize() * size;
-        height += 8;
-
-
-        currentWindow.lineEndX =
-            currentWindow.pointer.x;
-
-        currentWindow.lineHeight =
-            std::max(
-                currentWindow.lineHeight,
-                height
-            );
-
-
-        // Update content size immediately.
-        currentWindow.contentSize.x =
-            std::max(
-                currentWindow.contentSize.x,
-                currentWindow.lineEndX -
-                contentStartX
-            );
-
-        currentWindow.contentSize.y =
-            std::max(
-                currentWindow.contentSize.y,
-                currentWindow.lineStartY +
-                currentWindow.lineHeight -
-                (
-                    currentWindow.position.y +
-                    currentWindow.window->borderSize.y
-                )
-            );
-    }
-
-
-    void EuclaseGUI::drawText(
-        std::string_view text,
-        float size,
-        vec4 color
-    ) {
-        textPipeline->Bind(Buffer);
-
-        GlyphConstant glyphConstant;
-
-        Buffer->PushResource(
-            FontAtlas,
-            textPipeline.get()
-        );
-
-
-        for (auto c : text) {
-            auto glyph = font->GetGlyph(c);
-
-            glyphConstant.location = {
-                PixelsToUnits(
-                    currentWindow.pointer.x +
-                    glyph.bearing.x * size,
-                    true
-                ),
-
-                PixelsToUnits(
-                    currentWindow.pointer.y -
-                    glyph.bearing.y * size +
-                    font->GetFontSize() * size,
-                    false
-                )
-            };
-
-            glyphConstant.size = {
-                PixelsToUnits(
-                    glyph.size.x * size
-                ),
-
-                PixelsToUnits(
-                    glyph.size.y * size,
-                    false
-                )
-            };
-
-            glyphConstant.Color = color;
-            glyphConstant.uv = glyph.uv;
-            glyphConstant.uvSize = glyph.uvSize;
-
-
-            Buffer->PushConstant(
-                ShaderStage::Vertex,
-                0,
-                &glyphConstant,
-                sizeof(GlyphConstant),
-                textPipeline.get()
-            );
-
-            Buffer->Draw(6);
-
-
-            currentWindow.pointer.x +=
-                glyph.advance * size;
-        }
-    }
-
-
-    bool EuclaseGUI::Button(
-        std::string_view text,
-        vec2 size,
-        vec4 color
-    ) {
-        const float contentStartX =
-            currentWindow.position.x +
-            currentWindow.window->borderSize.x;
-
-        /*
-         * Start a new line unless SameLine() was called.
-         */
-        if (!currentWindow.sameLine) {
-            currentWindow.lineStartY +=
-                currentWindow.lineHeight;
-
-            currentWindow.lineHeight = 0.0f;
-
-            currentWindow.lineEndX =
-                contentStartX;
-        }
-
-
-        currentWindow.pointer = {
-            currentWindow.lineEndX +
-            (
-                currentWindow.sameLine
-                    ? currentWindow.sameLineSpacing
-                    : 0.0f
-            ),
-
-            currentWindow.lineStartY
-        };
-
-        currentWindow.sameLine = false;
-
-
-        const vec2 position =
-            currentWindow.pointer;
-
-
-        const bool hovered =
-            mousePosition.x >= position.x &&
-            mousePosition.x <= position.x + size.x &&
-            mousePosition.y >= position.y &&
-            mousePosition.y <= position.y + size.y;
-
-
-        const bool pressed =
-            hovered &&
-            mouseButtons[
-                static_cast<size_t>(MouseButton::Left)
-            ];
-
-
-        vec4 buttonColor = color;
-
-
-        if (pressed) {
-            buttonColor.x *= 0.7f;
-            buttonColor.y *= 0.7f;
-            buttonColor.z *= 0.7f;
-        }
-        else if (hovered) {
-            buttonColor.x *= 1.2f;
-            buttonColor.y *= 1.2f;
-            buttonColor.z *= 1.2f;
-        }
-
-
-        Box box;
-
-        box.location =
-            PixelsToUnits(position);
-
-        box.size =
-            PixelsToUnits(size);
-
-        box.color =
-            buttonColor;
-
-        DrawBox(box);
-
-
-        // Calculate text dimensions.
-        float textWidth = 0.0f;
-
-        for (char c : text) {
-            textWidth +=
-                font->GetGlyph(c).advance;
-        }
-
-        const float textHeight =
-            font->GetFontSize();
-
-
-        // Draw centered text without affecting layout.
-        const vec2 oldPointer =
-            currentWindow.pointer;
-
-        currentWindow.pointer = {
-            position.x +
-                (size.x - textWidth) * 0.5f,
-
-            position.y +
-                (size.y - textHeight) * 0.5f
-        };
-
-
-        drawText(
-            text,
-            1.0f,
-            {
-                1.0f,
-                1.0f,
-                1.0f,
-                1.0f
-            }
-        );
-
-
-        currentWindow.pointer =
-            oldPointer;
-
-
-        // Update layout.
-        currentWindow.lineEndX =
-            position.x + size.x;
-
-        currentWindow.lineHeight =
-            std::max(
-                currentWindow.lineHeight,
-                size.y
-            );
-
-
-        currentWindow.contentSize.x =
-            std::max(
-                currentWindow.contentSize.x,
-                currentWindow.lineEndX -
-                contentStartX
-            );
-
-        currentWindow.contentSize.y =
-            std::max(
-                currentWindow.contentSize.y,
-                currentWindow.lineStartY +
-                currentWindow.lineHeight -
-                (
-                    currentWindow.position.y +
-                    currentWindow.window->borderSize.y
-                )
-            );
-
-
-        return hovered &&
-               IsMouseReleased(
-                   MouseButton::Left
-               );
-    }
-
-
-    void EuclaseGUI::DrawBox(Box& box)
-    {
+    void EuclaseGUI::DrawBox(Box &box) {
         boxPipeline->Bind(Buffer);
 
         Buffer->PushConstant(
@@ -1187,7 +868,7 @@ namespace Euclase {
             boxPipeline.get()
         );
 
-        Buffer->Draw(6);
+        Buffer->Draw(6, 1);
     }
 
 
@@ -1196,17 +877,16 @@ namespace Euclase {
         bool isWidth
     ) {
         auto [width, height] =
-            m_renderer->GetExtent();
+                m_renderer->GetExtent();
 
         return pixels /
-            static_cast<float>(
-                isWidth ? width : height
-            );
+               static_cast<float>(
+                   isWidth ? width : height
+               );
     }
 
 
-    vec2 EuclaseGUI::PixelsToUnits(vec2 pixels)
-    {
+    vec2 EuclaseGUI::PixelsToUnits(vec2 pixels) {
         return {
             PixelsToUnits(pixels.x, true),
             PixelsToUnits(pixels.y, false)
@@ -1220,7 +900,7 @@ namespace Euclase {
         int mods
     ) {
         mouseButtons[button] =
-            action != 0;
+                action != 0;
     }
 
 
@@ -1234,10 +914,10 @@ namespace Euclase {
         };
 
         mouseDelta =
-            newPosition - mousePosition;
+                newPosition - mousePosition;
 
         mousePosition =
-            newPosition;
+                newPosition;
     }
 
 
@@ -1246,10 +926,10 @@ namespace Euclase {
         double yoffset
     ) {
         mouseScroll.x +=
-            static_cast<float>(xoffset);
+                static_cast<float>(xoffset);
 
         mouseScroll.y +=
-            static_cast<float>(yoffset);
+                static_cast<float>(yoffset);
     }
 
 
@@ -1263,19 +943,18 @@ namespace Euclase {
             return;
 
         const auto keyCode =
-            static_cast<KeyCode>(key);
+                static_cast<KeyCode>(key);
 
         if (keyCode == KeyCode::Unknown)
             return;
 
         const size_t index =
-            static_cast<size_t>(keyCode);
+                static_cast<size_t>(keyCode);
 
         if (index >= std::size(keys))
             return;
 
         keys[index] =
-            action != 0;
+                action != 0;
     }
-
 }

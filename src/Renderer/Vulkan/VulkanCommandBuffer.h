@@ -32,7 +32,7 @@ namespace Euclase {
         void Begin() override {
             Begin({});
         }
-        void Draw(unsigned int vertices) override;
+        void Draw(unsigned int vertices, unsigned int instances) override;
         void Reset(vk::CommandBufferResetFlags flags = {}) const {
             commandBuffer.reset(flags);
         }

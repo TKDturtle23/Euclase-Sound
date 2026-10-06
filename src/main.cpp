@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
 
     if (Euclase::EuclaseGUI::Begin(window)) {
       Euclase::EuclaseGUI::Text("Hello, Euclase!", 2);
-
+      Euclase::EuclaseGUI::SameLine(6);
       if (Euclase::EuclaseGUI::Button("Click me!", {200, 50}, {0.1, 0.1, 0.4, 1.0})) {
         std::cout << "Button clicked!\n";
       }
@@ -64,8 +64,9 @@ int main(int argc, char* argv[]) {
       Euclase::EuclaseGUI::End();
     }
 
-
+    Euclase::EuclaseGUI::Render();
     Euclase::EuclaseGUI::EndFrame();
+
     renderer->EndFrame();
     std::this_thread::sleep_for(std::chrono::milliseconds(3));
   }

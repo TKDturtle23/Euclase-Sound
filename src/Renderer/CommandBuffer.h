@@ -16,7 +16,7 @@ namespace Euclase {
         virtual void Begin() = 0;
         virtual void End() = 0;
 
-        virtual void Draw(unsigned int vertices) = 0;
+        virtual void Draw(unsigned int vertices, unsigned int instances) = 0;
         virtual void PushConstant(
             ShaderStage stage,
             uint32_t offset,

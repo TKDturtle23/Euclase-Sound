@@ -30,9 +30,9 @@ const wl_registry_listener registryListener = {
         .button = WaylandDisplay::PointerButton,
         .axis = WaylandDisplay::PointerAxis,
         .frame = WaylandDisplay::PointerFrame,
-        .axis_source = nullptr,
-        .axis_stop = nullptr,
-        .axis_discrete = nullptr,
+        .axis_source = WaylandDisplay::PointerAxisSource,
+        .axis_stop = WaylandDisplay::PointerAxisStop,
+        .axis_discrete = WaylandDisplay::PointerAxisDiscrete,
         .axis_value120 = nullptr,
         .axis_relative_direction = nullptr
     };
@@ -599,5 +599,29 @@ void WaylandDisplay::KeyboardRepeatInfo(void*, wl_keyboard*, int32_t, int32_t) {
         image->hotspot_x,
         image->hotspot_y
     );
+}
+
+
+    void WaylandDisplay::PointerAxisSource(
+    void*,
+    wl_pointer*,
+    uint32_t)
+{
+}
+
+    void WaylandDisplay::PointerAxisStop(
+        void*,
+        wl_pointer*,
+        uint32_t,
+        uint32_t)
+{
+}
+
+    void WaylandDisplay::PointerAxisDiscrete(
+        void*,
+        wl_pointer*,
+        uint32_t,
+        int32_t)
+{
 }
 }

@@ -19,6 +19,13 @@ struct Box {
   vec2 size{};
   vec4 color{};
 };
+  typedef struct {
+    vec2 location;
+    vec2 size;
+    vec4 Color;
+    vec2 uv;
+    vec2 uvSize;
+  } GlyphConstant;
   enum class WindowFlags : uint64_t{
     None = 0,
     Non_Resizable = 1 << 0,
@@ -46,6 +53,9 @@ struct Box {
 
     // docking
     bool Dockable = true;
+
+    std::vector<std::shared_ptr<GraphicsBuffer>> TextBuffers;
+    uint64_t currentBufferGlyphCount = 1000;
   };
   enum class ResizeEdge {
     None,
@@ -67,6 +77,27 @@ struct Box {
     Down,
     Middle
   };
+  struct WindowRenderData {
+    std::vector<Box> boxes;
+    std::vector<GlyphConstant> texts;
+  };
+  typedef struct {
+    Window* window;
+    WindowRenderData renderData;
+
+    vec2 pointer;
+    vec2 size;
+    vec2 position;
+    vec2 contentSize;
+
+    // Layout state
+    float lineStartY;
+    float lineEndX;
+    float lineHeight;
+
+    bool sameLine;
+    float sameLineSpacing;
+  } CurrentWindow;
 class EuclaseGUI {
  public:
   static void Init(std::shared_ptr<Platform>,
@@ -78,6 +109,7 @@ class EuclaseGUI {
 
   static bool Begin(Window &window);
   static void End();
+  static void Render();
 
   static void Text(std::string_view text, float size, vec4 color = {1,1,1,1});
 
@@ -94,6 +126,10 @@ private:
   static void MouseMoveCallback(double xpos, double ypos);
   static void MouseScrollCallback(double xoffset, double yoffset);
   static void KeyCallback(int key, int scancode, int action, int mods);
+
+  static void BringWindowToFront(const std::string &windowName);
+
+  static void AddWindow(const std::string &title);
 
   static bool IsMousePressed(MouseButton button);
 
@@ -112,7 +148,10 @@ private:
   static std::shared_ptr<GraphicsDevice> m_device;
   static std::unique_ptr<GraphicsPipeline> boxPipeline;
   static std::unique_ptr<GraphicsPipeline> textPipeline;
+  static unsigned int PipelineTextBufferSize; // in glyphs
+  static GraphicsPipelineDesc textDesc;
   static ShaderResource FontAtlas;
+  static ShaderResource TextData;
   static std::unique_ptr<Font> font;
   static std::shared_ptr<CommandBuffer> Buffer;
   // Input state
@@ -136,6 +175,9 @@ private:
 
   static int m_dockableArea;
   static std::unordered_map<std::string, Window> m_Windows;
+  static std::vector<std::string> m_WindowRenderOrder;
+  static std::unordered_map<std::string, WindowRenderData> m_WindowRenderData;
+  static CurrentWindow currentWindow;
 
 
 };

@@ -76,7 +76,98 @@ struct vec2 {
 constexpr vec2 operator*(float scalar, const vec2& v) {
     return v * scalar;
 }
+    struct vec3 {
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
 
+    constexpr vec3() = default;
+    constexpr vec3(float x, float y, float z)
+        : x(x), y(y), z(z) {}
+
+
+    constexpr vec3 operator+(const vec3& other) const {
+        return {
+            x + other.x,
+            y + other.y,
+            z + other.z
+        };
+    }
+
+    constexpr vec3 operator-(const vec3& other) const {
+        return {
+            x - other.x,
+            y - other.y,
+            z - other.z
+        };
+    }
+
+    constexpr vec3 operator*(float scalar) const {
+        return {
+            x * scalar,
+            y * scalar,
+            z * scalar
+        };
+    }
+
+    constexpr vec3 operator/(float scalar) const {
+        return {
+            x / scalar,
+            y / scalar,
+            z / scalar
+        };
+    }
+
+    constexpr vec3& operator+=(const vec3& other) {
+        x += other.x;
+        y += other.y;
+        z += other.z;
+        return *this;
+    }
+
+    constexpr vec3& operator-=(const vec3& other) {
+        x -= other.x;
+        y -= other.y;
+        z -= other.z;
+        return *this;
+    }
+
+    constexpr vec3& operator*=(float scalar) {
+        x *= scalar;
+        y *= scalar;
+        z *= scalar;
+        return *this;
+    }
+
+    constexpr vec3& operator/=(float scalar) {
+        x /= scalar;
+        y /= scalar;
+        z /= scalar;
+        return *this;
+    }
+
+    constexpr float operator[](size_t index) const {
+        return index == 0 ? x :
+               index == 1 ? y : z;
+    }
+
+    constexpr float& operator[](size_t index) {
+        return index == 0 ? x :
+               index == 1 ? y : z;
+    }
+
+    float Length() const {
+        return std::sqrt(x * x + y * y + z * z);
+    }
+
+    constexpr float LengthSquared() const {
+        return x * x + y * y + z * z;
+    }
+};
+
+    constexpr vec3 operator*(float scalar, const vec3& v) {
+        return v * scalar;
+    }
 
 struct vec4 {
     float x = 0.0f;

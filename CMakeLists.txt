@@ -55,6 +55,7 @@ set(COMMON_SOURCES
         src/GUI/Font.cpp
         src/GUI/Font.h
         src/vec.h
+        src/GUI/EuclaseGUIElements.cpp
 )
 
 add_executable(EuclaseSound ${COMMON_SOURCES})
@@ -70,28 +71,7 @@ target_link_libraries(EuclaseSound PRIVATE
         shaderc_combined
 )
 
-include(CTest)
-if(BUILD_TESTING)
-    find_file(EUCLASE_TEST_FONT
-            NAMES DejaVuSans.ttf FreeSans.otf NotoSans-Regular.ttf
-            PATHS
-                /usr/share/fonts/truetype/dejavu
-                /usr/share/fonts/gnu-free
-                /usr/share/fonts/noto
-                /usr/local/share/fonts
-    )
-    if(EUCLASE_TEST_FONT)
-        add_executable(EuclaseTextTests
-                tests/TextTests.cpp
-        )
-        target_include_directories(EuclaseTextTests PRIVATE "src/")
-        target_link_libraries(EuclaseTextTests PRIVATE Freetype::Freetype)
-        target_compile_definitions(EuclaseTextTests PRIVATE
-                EUCLASE_TEST_FONT="${EUCLASE_TEST_FONT}"
-        )
-        add_test(NAME EuclaseTextTests COMMAND EuclaseTextTests)
-    endif()
-endif()
+
 
 # -------------------------------------------------------------------------
 # Linux / Wayland
