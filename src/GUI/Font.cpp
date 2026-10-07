@@ -154,55 +154,43 @@ namespace Euclase {
     int y = padding;
     int rowHeight = 0;
 
-    for (int c = 32; c <= 126; ++c) {
-        const TemporaryGlyph& glyph = temporary[c];
+        for (int c = 32; c <= 126; ++c) {
+            const TemporaryGlyph& glyph = temporary[c];
+            GlyphInfo& info = glyphs[c];
 
-        if (glyph.width == 0 || glyph.height == 0)
-            continue;
+            // Metrics are needed for every glyph, including whitespace.
+            info.size = {
+                static_cast<float>(glyph.width),
+                static_cast<float>(glyph.height)
+            };
+            info.bearing = {
+                static_cast<float>(glyph.bearingX),
+                static_cast<float>(glyph.bearingY)
+            };
+            info.advance = static_cast<float>(glyph.advanceX);
 
-        if (x + glyph.width + padding > atlasWidth) {
-            x = padding;
-            y += rowHeight + padding;
-            rowHeight = 0;
+            // Empty bitmap: nothing to pack, uv stays zeroed.
+            if (glyph.width == 0 || glyph.height == 0) {
+                info.uv = {0.0f, 0.0f};
+                info.uvSize = {0.0f, 0.0f};
+                continue;
+            }
+
+            if (x + glyph.width + padding > atlasWidth) {
+                x = padding;
+                y += rowHeight + padding;
+                rowHeight = 0;
+            }
+
+            info.uv = { static_cast<float>(x), static_cast<float>(y) };
+            info.uvSize = {
+                static_cast<float>(glyph.width),
+                static_cast<float>(glyph.height)
+            };
+
+            x += glyph.width + padding;
+            rowHeight = std::max(rowHeight, glyph.height);
         }
-
-        GlyphInfo& info = glyphs[c];
-
-        info.uv = {
-            static_cast<float>(x),
-            static_cast<float>(y)
-        };
-
-        info.uvSize = {
-            static_cast<float>(glyph.width),
-            static_cast<float>(glyph.height)
-        };
-
-        info.size = {
-            static_cast<float>(glyph.width),
-            static_cast<float>(glyph.height)
-        };
-
-        info.bearing = {
-            static_cast<float>(glyph.bearingX),
-            static_cast<float>(glyph.bearingY)
-        };
-
-        info.advance =
-            static_cast<float>(glyph.advanceX);
-
-        /*
-         * Temporarily store atlas coordinates in UV.
-         * They are converted to normalized coordinates below
-         * after the final atlas dimensions are known.
-         */
-        x += glyph.width + padding;
-
-        rowHeight = std::max(
-            rowHeight,
-            glyph.height
-        );
-    }
 
     const int bitmapWidth = atlasWidth;
     const int bitmapHeight = y + rowHeight + padding;

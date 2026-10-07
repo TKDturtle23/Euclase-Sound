@@ -56,6 +56,10 @@ set(COMMON_SOURCES
         src/GUI/Font.h
         src/vec.h
         src/GUI/EuclaseGUIElements.cpp
+        src/platform/Audio/Platform_Audio.cpp
+        src/platform/Audio/Platform_Audio.h
+        src/platform/Audio/PipeWire/Platform_Pipewire.cpp
+        src/platform/Audio/PipeWire/Platform_Pipewire.h
 )
 
 add_executable(EuclaseSound ${COMMON_SOURCES})
@@ -83,7 +87,7 @@ if(UNIX AND NOT APPLE)
     pkg_check_modules(WAYLAND REQUIRED wayland-client)
     pkg_check_modules(WAYLAND_CURSOR REQUIRED wayland-cursor)
     pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
-
+    pkg_check_modules(PipeWire REQUIRED IMPORTED_TARGET libpipewire-0.3)
     find_program(WAYLAND_SCANNER wayland-scanner REQUIRED)
 
     # ---------------------------------------------------------------------
@@ -206,6 +210,7 @@ if(UNIX AND NOT APPLE)
             ${WAYLAND_LIBRARIES}
             ${WAYLAND_CURSOR_LIBRARIES}
             ${XKBCOMMON_LIBRARIES}
+            PkgConfig::PipeWire
     )
 
     # -------------------------------------------------------------------------

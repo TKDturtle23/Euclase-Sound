@@ -63,6 +63,7 @@ std::shared_ptr<CommandBuffer> EuclaseGUI::Buffer;
 vec2 EuclaseGUI::mousePosition{};
 vec2 EuclaseGUI::mouseDelta{};
 vec2 EuclaseGUI::mouseScroll{};
+  vec2 EuclaseGUI::mouseScrollDelta{};
 bool EuclaseGUI::previousMouseButtons[static_cast<size_t>(MouseButton::X2) + 1]{};
 bool EuclaseGUI::mouseButtons[static_cast<size_t>(MouseButton::X2) + 1]{};
 bool EuclaseGUI::keys[static_cast<size_t>(KeyCode::Menu) + 1]{};
@@ -737,6 +738,7 @@ void EuclaseGUI::HandleInput() {
   const bool pressed = IsMousePressed(MouseButton::Left);
   const vec2 mouse = mousePosition;
 
+
   switch (m_drag.mode) {
     case DragMode::None: {
       if (m_hover.root)
@@ -1005,7 +1007,7 @@ void EuclaseGUI::BeginFrame() {
 
 void EuclaseGUI::EndFrame() {
   std::copy(std::begin(mouseButtons), std::end(mouseButtons), std::begin(previousMouseButtons));
-
+  mouseScrollDelta = {0.0, 0.0};
   // Windows that weren't Begin()'d this frame are gone (closed): free their dock slot.
   std::vector<std::string> gone;
   auto collect = [&](DockNode *n) {
@@ -1278,7 +1280,7 @@ void EuclaseGUI::Render() {
   m_overlay.clear();
 }
 
-void EuclaseGUI::DrawBox(Box &box) {
+void EuclaseGUI::DrawBox(Box box) {
   boxPipeline->Bind(Buffer);
   Buffer->PushConstant(ShaderStage::Vertex, 0, &box, sizeof(Box), boxPipeline.get());
   Buffer->Draw(6, 1);
@@ -1311,6 +1313,7 @@ void EuclaseGUI::MouseMoveCallback(double xpos, double ypos) {
 void EuclaseGUI::MouseScrollCallback(double xoffset, double yoffset) {
   mouseScroll.x += static_cast<float>(xoffset);
   mouseScroll.y += static_cast<float>(yoffset);
+  mouseScrollDelta = {static_cast<float>(xoffset), static_cast<float>(yoffset)};
 }
 
 void EuclaseGUI::KeyCallback(int key, int scancode, int action, int mods) {

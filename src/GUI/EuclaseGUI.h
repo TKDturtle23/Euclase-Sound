@@ -1,5 +1,7 @@
 #ifndef EUCLASESOUND_EUCLASEGUI_H
 #define EUCLASESOUND_EUCLASEGUI_H
+// The docking code is AI Generated. I have an idea of how it works, but I am not smart enough yet to fully understand it. I plan on replacing it in the future ship of theseus style.
+// The rest of the code in the GUI is made by me :3
 #include <cstdint>
 #include <filesystem>
 #include <functional>
@@ -107,6 +109,7 @@ struct CurrentWindow {
   bool hidden = false;  // inactive tab / closed: widgets still run, output is discarded
 };
 
+
 // ---------------------------------------------------------------------------
 // Dock tree
 //
@@ -147,7 +150,15 @@ struct HoverInfo {
   int tabIndex = -1;
   bool onBar = false;
 };
+  struct Note {
+    int note; // from A 440*
+    double Length;
+    double Time;
 
+  };
+struct InstrumentNotes {
+  std::vector<Note> Notes;
+};
 enum class DragMode { None, PendingMove, MovingWindow, ResizeFloating, Splitter };
 
 struct DragState {
@@ -172,7 +183,15 @@ struct TextBatch {
   size_t capacity = 0;  // glyphs
   std::vector<std::shared_ptr<GraphicsBuffer>> buffers;  // one per frame in flight
 };
-
+enum class Quantization {
+  Quarter,
+  Triplets,
+  QuarterTriplets,
+  HalfTriplets,
+  Eights,
+  Sixteenths,
+  ThirtySeconds,
+};
 class EuclaseGUI {
  public:
   static void Init(std::shared_ptr<Platform>, std::shared_ptr<GraphicsRenderer>,
@@ -191,6 +210,17 @@ class EuclaseGUI {
   static void drawText(std::string_view text, float size, vec4 color);
 
   static bool Button(std::string_view text, vec2 size = {100, 25}, vec4 color = {1, 1, 1, 1});
+
+  static bool HoveringBox(vec2 pos, vec2 size);
+
+  // fills the window as much as possible
+  static void InstrumentNotes( int Lowest,  int Highest,
+      Euclase::InstrumentNotes &Notes,
+      const std::function<void(Euclase::InstrumentNotes &)> &callback,
+      int NoteSize, float TimeWidth /* pixels per beat */, float Height,
+      int &scroll, float &scrollY, Quantization SelectQuant, bool quantize);
+
+
   static void SameLine(float spacing = 0.0f);
 
   // Region (pixels) left over for the application after all docked windows.
@@ -200,7 +230,7 @@ class EuclaseGUI {
 
  private:
   // drawing
-  static void DrawBox(Box &box);
+  static void DrawBox(Box box);
   static Box MakeBox(vec2 pos, vec2 size, vec4 color);
   static void AddOverlay(vec2 pos, vec2 size, vec4 color);
   static float PixelsToUnits(float pixels, bool isWidth = true);
@@ -250,6 +280,11 @@ class EuclaseGUI {
   static void SplitterRect(const DockNode *n, vec2 &pos, vec2 &size);
   static float BarHeight(const DockNode *leaf);
   static float TabWidth(const DockNode *leaf);
+
+  static vec2 mouseScrollDelta;
+
+  static vec2 mouseScrollPrev;
+
   static Window &W(const std::string &title);
 
  private:
@@ -298,6 +333,7 @@ class EuclaseGUI {
   static std::vector<TextBatch> m_ChromeBatches;
   static Window m_chromeWindow;
   static CurrentWindow currentWindow;
+
 };
 }  // namespace Euclase
 #endif
