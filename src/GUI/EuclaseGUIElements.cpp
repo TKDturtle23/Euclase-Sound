@@ -435,10 +435,18 @@ namespace Euclase {
         };
 
         currentWindow.sameLine = false;
-
-        const int Width = (currentWindow.size.x - currentWindow.window->borderSize.x - currentWindow.window->padding.x) - currentWindow.pointer.x;
         constexpr int NotesWidth = 100;
-        float m_TimeWidth = std::max(Width, 1);
+        const float contentRightX =
+            currentWindow.position.x +
+            currentWindow.size.x -
+            currentWindow.window->borderSize.x -
+            currentWindow.window->padding.x;
+
+        const float m_TimeWidth = std::max(
+            (contentRightX - currentWindow.pointer.x) - NotesWidth,
+            1.0f
+        );
+
 
         unsigned int visibleNotes = std::floor(Height / static_cast<float>(NoteSize)) - 1;
         int Middle = std::floor((Lowest + Highest) / 2);
@@ -465,7 +473,7 @@ namespace Euclase {
             bool Black = IsHalf(octaveNote);
             float x = currentWindow.pointer.x;
             float y = currentWindow.pointer.y + (i * NoteSize);
-            bool Hovered = HoveringBox({x, y}, {static_cast<float>(NotesWidth + Width), (float)NoteSize});
+            bool Hovered = HoveringBox({x, y}, {static_cast<float>(NotesWidth + m_TimeWidth), (float)NoteSize});
             bool Over = HoveringBox({x, y}, {static_cast<float>(NotesWidth), (float)NoteSize});
             vec4 Color1;
             vec4 Color2;
@@ -499,7 +507,7 @@ namespace Euclase {
             vec4 col = (i % 2) ? vec4{0.5f, 0.5f, 0.5f, 1.0f} : vec4{0.3f, 0.3f, 0.3f, 1.0f};
             float x = currentWindow.pointer.x + NotesWidth;
             float y = currentWindow.pointer.y + (i * NoteSize);
-            bool Hovered = HoveringBox({x, y}, {static_cast<float>(Width), (float)NoteSize});
+            bool Hovered = HoveringBox({x, y}, {static_cast<float>(m_TimeWidth), (float)NoteSize});
             if (Hovered) {
                 col = vec4{0.25f, 0.25f, 0.25f, 1.0f};
             }
