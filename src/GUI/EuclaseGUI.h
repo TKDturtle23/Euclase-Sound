@@ -192,6 +192,11 @@ enum class Quantization {
   Sixteenths,
   ThirtySeconds,
 };
+  struct InstrumentState {
+    bool Drawing = false;
+    Note drawn;
+    int startX = 0;
+  };
 class EuclaseGUI {
  public:
   static void Init(std::shared_ptr<Platform>, std::shared_ptr<GraphicsRenderer>,
@@ -214,11 +219,11 @@ class EuclaseGUI {
   static bool HoveringBox(vec2 pos, vec2 size);
 
   // fills the window as much as possible
-  static void InstrumentNotes( int Lowest,  int Highest,
-      Euclase::InstrumentNotes &Notes,
-      const std::function<void(Euclase::InstrumentNotes &)> &callback,
-      int NoteSize, float TimeWidth /* pixels per beat */, float Height,
-      int &scroll, float &scrollY, Quantization SelectQuant, bool quantize);
+  static void InstrumentNotes(int Lowest, int Highest,
+                              InstrumentNotes &Notes,
+                              const std::function<void(InstrumentNotes &)> &callback,
+                              int NoteSize, float TimeWidth /* pixels per beat */, float Height,
+                              int &scroll, float &scrollY, Quantization SelectQuant, bool quantize, InstrumentState &state);
 
 
   static void SameLine(float spacing = 0.0f);

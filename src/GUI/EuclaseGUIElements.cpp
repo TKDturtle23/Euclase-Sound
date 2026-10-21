@@ -405,7 +405,7 @@ namespace Euclase {
     void EuclaseGUI::InstrumentNotes(
          int Lowest,  int Highest, Euclase::InstrumentNotes &Notes,
         const std::function<void(Euclase::InstrumentNotes &)> &callback,
-        int NoteSize, float TimeWidth, float Height, int &scroll, float &scrollY, Quantization SelectQuant, bool quantize) {
+        int NoteSize, float TimeWidth, float Height, int &scroll, float &scrollY, Quantization SelectQuant, bool quantize, InstrumentState& state) {
         const float contentStartX =
         currentWindow.position.x +
         currentWindow.window->borderSize.x;
@@ -448,18 +448,31 @@ namespace Euclase {
         );
 
 
-        unsigned int visibleNotes = std::floor(Height / static_cast<float>(NoteSize)) - 1;
-        int Middle = std::floor((Lowest + Highest) / 2);
-        float ScrollSpeed = 0.25;
+        const int visibleNotes = std::max(0, (int)std::floor(Height / (float)NoteSize) - 1);
+        const int Middle       = (Lowest + Highest) / 2;
+        const float ScrollSpeed = 0.25f;
 
-        // Vertical Scrolling
-        if (visibleNotes <= Highest - Lowest)
-            scroll += std::floor(-mouseScrollDelta.y * ScrollSpeed);
+        const bool canScroll = visibleNotes < (Highest - Lowest + 1);   // more notes than rows
+        const bool overGrid  = HoveringBox(
+            {currentWindow.pointer.x, currentWindow.pointer.y},
+            {(float)(NotesWidth) + m_TimeWidth, (float)(visibleNotes * NoteSize)});
 
-        if (Middle + scroll > Highest) {
-            scroll = Highest - Middle;
-        } else if ((Middle + scroll) - visibleNotes < Lowest && visibleNotes <= Highest - Lowest) {
-            scroll = Lowest + visibleNotes;
+        if (canScroll) {
+            if (overGrid) {
+                scrollY += -mouseScrollDelta.y * ScrollSpeed;   // accumulate fractional ticks
+                int steps = (int)scrollY;                       // truncate toward zero (symmetric)
+                scroll  += steps;
+                scrollY -= steps;
+            }
+
+            // top row = Middle + scroll; bottom row = top - (visibleNotes - 1)
+            const int minTop = Lowest + visibleNotes - 1;
+            const int maxTop = Highest;
+            int top = std::clamp(Middle + scroll, minTop, maxTop);
+            scroll = top - Middle;
+        } else {
+            scroll  = Highest - Middle;   // everything fits: pin to top
+            scrollY = 0.0f;
         }
 
 
@@ -499,6 +512,8 @@ namespace Euclase {
             }
 
         }
+
+        int HoveredIndex = -1;
         for (int i = 0; i < visibleNotes; i++) {
             int note = (Middle + scroll) - i;
             if (note < Lowest) {
@@ -508,14 +523,42 @@ namespace Euclase {
             float x = currentWindow.pointer.x + NotesWidth;
             float y = currentWindow.pointer.y + (i * NoteSize);
             bool Hovered = HoveringBox({x, y}, {static_cast<float>(m_TimeWidth), (float)NoteSize});
+
             if (Hovered) {
                 col = vec4{0.25f, 0.25f, 0.25f, 1.0f};
+                HoveredIndex = i;
             }
             currentWindow.renderData.boxes.push_back(MakeBox({x, y}, {m_TimeWidth, (float)NoteSize}, col));
         }
+        for (auto note : Notes.Notes) {
+            if (((Middle + scroll) - note.note < 0) || ((Middle + scroll) - note.note >= visibleNotes)) {
+                continue;
+            }
+            float x = currentWindow.pointer.x + NotesWidth;
+            float y = currentWindow.pointer.y + (((Middle + scroll) - note.note) * NoteSize);
+            currentWindow.renderData.boxes.push_back(MakeBox({(float)(x + note.Time * TimeWidth), y}, {(float)(note.Length), (float)NoteSize}, vec4{0.75f, 0.25f, 0.25f, 1.0f}));
+        }
+        if (HoveredIndex == -1) {
+            goto end;
+        }
 
-
-
+        if (mouseButtons[(int)MouseButton::Left] && !state.Drawing) {
+            state.Drawing = true;
+            state.startX = mousePosition.x;
+            int note = (Middle + scroll) - HoveredIndex;
+            state.drawn.note = note;
+        } else if (state.Drawing) {
+            float x = currentWindow.pointer.x + NotesWidth;
+            float y = currentWindow.pointer.y + (((Middle + scroll) - state.drawn.note) * NoteSize);
+            currentWindow.renderData.boxes.push_back(MakeBox({(float)state.startX, y}, {(mousePosition.x - state.startX), (float)NoteSize}, vec4{0.75f, 0.25f, 0.25f, 1.0f}));
+            if (!mouseButtons[(int)MouseButton::Left]) {
+                state.Drawing = false;
+                state.drawn.Length = mousePosition.x - state.startX;
+                state.drawn.Time = (state.startX - x) / TimeWidth;
+                Notes.Notes.push_back(state.drawn);
+            }
+        }
+        end:
         currentWindow.pointer.y += visibleNotes * NoteSize;
 
     }

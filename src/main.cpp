@@ -60,7 +60,7 @@ void test (InstrumentNotes& notes) {}
         InstrumentNotes notes;
     int scroll = 0;
     float scrolly = 0;
-
+        InstrumentState state;
 
         while (!platform->ShouldClose()) {
             platform->Dispatch();  // pumps wl_display + fires WindowResize/WindowClose
@@ -71,7 +71,7 @@ void test (InstrumentNotes& notes) {}
             if (EuclaseGUI::Begin(window)) {
                 EuclaseGUI::Text("Hello world!", 1);
                 EuclaseGUI::InstrumentNotes(-57, 30, notes, test, 30, 1000, window.size.y - (window.padding.y * 4) - window.HeaderHeight,
-                    scroll, scrolly, Quantization::Quarter, true);
+                                            scroll, scrolly, Quantization::Quarter, true, state);
 
                 EuclaseGUI::End();
             }
