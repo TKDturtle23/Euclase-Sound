@@ -39,13 +39,14 @@ void test (InstrumentNotes& notes) {}
         std::cout << "Audio devices: " << AudioDevices.size() << std::endl;
         if (AudioDevices.size() > 0) {
             audio = AudioDevices[0];
+            audio->Init(48000, 2);
+            auto Output = audio->GetAudioDevices(DeviceFilter::Outputs);
+            for (auto &device : Output) {
+                std::cout << device.description << std::endl;
+            }
+            auto Input = audio->GetAudioDevices(DeviceFilter::Inputs);
+
         }
-        audio->Init(48000, 2);
-        auto Output = audio->GetAudioDevices(DeviceFilter::Outputs);
-        for (auto &device : Output) {
-            std::cout << device.description << std::endl;
-        }
-        auto Input = audio->GetAudioDevices(DeviceFilter::Inputs);
 
 
 
@@ -54,10 +55,7 @@ void test (InstrumentNotes& notes) {}
         window.position = {100, 100};
         window.size = {500, 500};
 
-        Window window2;
-        window2.title = "Test2!";
-        window2.position = {200, 200};
-        window2.size = {500, 500};
+
 
         InstrumentNotes notes;
     int scroll = 0;

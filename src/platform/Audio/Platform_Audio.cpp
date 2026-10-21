@@ -8,7 +8,9 @@
 #endif
 
 std::vector<std::shared_ptr<Euclase::Platform_Audio>> Euclase::Platform_Audio::EnumerateDevices() {
+    std::vector<std::shared_ptr<Euclase::Platform_Audio>>  devices;
 #ifdef Wayland
-    return {std::make_shared<Platform_Pipewire>()};
+    devices.push_back(std::make_shared<Platform_Pipewire>());
 #endif
+    return devices;
 }
